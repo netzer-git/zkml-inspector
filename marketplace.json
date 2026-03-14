@@ -1,0 +1,53 @@
+{
+  "name": "zkml-inspector",
+  "version": "0.1.0",
+  "displayName": "zkML Inspector — Paper-to-Code Gap Analyzer",
+  "description": "Analyzes gaps between zkML research papers and their implementations. Generates discrepancy & optimization reports covering logic gaps, performance bottlenecks, and soundness risks.",
+  "author": "zkml-inspector",
+  "repository": "https://github.com/<owner>/zkml-inspector",
+  "license": "MIT",
+  "skills": [
+    {
+      "name": "analyze-zkml-gap",
+      "path": ".github/skills/analyze-zkml-gap/SKILL.md",
+      "triggers": [
+        "zkml",
+        "paper gap",
+        "discrepancy report",
+        "zero-knowledge ml",
+        "paper vs code",
+        "implementation gap"
+      ]
+    }
+  ],
+  "agents": [
+    {
+      "name": "zkml-inspector",
+      "path": ".github/agents/zkml-inspector.agent.md"
+    }
+  ],
+  "prompts": [
+    {
+      "name": "analyze-full",
+      "path": ".github/prompts/analyze-full.prompt.md"
+    },
+    {
+      "name": "analyze-quick",
+      "path": ".github/prompts/analyze-quick.prompt.md"
+    }
+  ],
+  "requirements": {
+    "tools": ["execute", "read", "search"],
+    "python": ">=3.10",
+    "dependencies": ".github/skills/analyze-zkml-gap/scripts/requirements.txt"
+  },
+  "tags": [
+    "zkml",
+    "zero-knowledge",
+    "machine-learning",
+    "cryptography",
+    "verification",
+    "research",
+    "gap-analysis"
+  ]
+}

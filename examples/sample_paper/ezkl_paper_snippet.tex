@@ -1,0 +1,120 @@
+\documentclass{article}
+\usepackage{amsmath, amssymb}
+
+\title{Efficient Zero-Knowledge Proofs for Neural Network Inference}
+\author{Example Authors}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+We present a framework for generating zero-knowledge proofs of neural network inference.
+Our approach handles the key operations in transformer models: matrix multiplication,
+layer normalization, softmax attention, and GELU activations. We demonstrate that our
+circuit construction achieves practical proving times while maintaining soundness.
+\end{abstract}
+
+\section{Introduction}
+
+Zero-knowledge machine learning (zkML) enables a prover to demonstrate that a neural
+network inference was performed correctly without revealing the model weights or input
+data. A key challenge is efficiently implementing non-polynomial operations such as
+Softmax and LayerNorm within arithmetic circuits.
+
+\section{Model Architecture}
+
+We consider a standard transformer architecture with the following components:
+
+\begin{enumerate}
+    \item Multi-head self-attention with $h$ heads and dimension $d_k = d/h$
+    \item Feed-forward network with GELU activation
+    \item Layer normalization after each sub-layer
+    \item Residual connections
+\end{enumerate}
+
+\section{Arithmetic Circuit Construction}
+
+\subsection{Matrix Multiplication}
+
+For input $X \in \mathbb{R}^{n \times d}$ and weight $W \in \mathbb{R}^{d \times m}$:
+
+\begin{equation}
+    Y_{ij} = \sum_{k=1}^{d} X_{ik} \cdot W_{kj}
+\end{equation}
+
+Each multiplication-addition is implemented as a single constraint in the arithmetic circuit.
+The total constraint count for MatMul is $O(n \cdot d \cdot m)$.
+
+\subsection{Softmax Approximation}
+
+The softmax function is defined as:
+
+\begin{equation}
+    \operatorname{Softmax}(x_i) = \frac{e^{x_i}}{\sum_{j} e^{x_j}}
+\end{equation}
+
+We approximate $e^x$ using a piecewise-linear function with $K=8$ segments over the
+range $[-8, 8]$. The approximation error is bounded by $\epsilon \leq 0.01$ for inputs
+in this range.
+
+Subject to: $\sum_i \operatorname{Softmax}(x_i) = 1$
+
+\subsection{Layer Normalization}
+
+\begin{equation}
+    \operatorname{LayerNorm}(x) = \gamma \cdot \frac{x - \mu}{\sqrt{\sigma^2 + \epsilon}} + \beta
+\end{equation}
+
+where $\mu = \frac{1}{n}\sum_{i} x_i$ and $\sigma^2 = \frac{1}{n}\sum_i (x_i - \mu)^2$.
+
+We implement division using Newton's method with 3 iterations, and inverse square root
+using a lookup table with 256 entries.
+
+\subsection{GELU Activation}
+
+\begin{equation}
+    \operatorname{GELU}(x) \approx 0.5x\left(1 + \tanh\left[\sqrt{2/\pi}(x + 0.044715x^3)\right]\right)
+\end{equation}
+
+We use the tanh approximation form and implement tanh via a lookup table.
+
+\subsection{ReLU Activation}
+
+\begin{equation}
+    \operatorname{ReLU}(x) = \max(0, x)
+\end{equation}
+
+Implemented using a sign decomposition: $x = x^+ - x^-$ with range checks on both components.
+
+\section{Quantization}
+
+All computations use 16-bit fixed-point arithmetic with 8 fractional bits. Model weights
+are quantized using symmetric per-tensor quantization.
+
+The quantization error is bounded by $2^{-8}$ per operation.
+
+\section{Security Analysis}
+
+\begin{theorem}
+The proof system satisfies computational soundness under the discrete logarithm assumption.
+The prover cannot produce a valid proof for an incorrect inference result except with
+negligible probability.
+\end{theorem}
+
+\begin{theorem}
+The proof system satisfies zero-knowledge: the verifier learns nothing about the model
+weights or input beyond the inference result.
+\end{theorem}
+
+Constraint: all model weights must be committed using Poseidon hash before proof generation.
+
+Constraint: every intermediate activation must be constrained to prevent layer-skipping attacks.
+
+Constraint: range checks enforce $x \in [-2^{15}, 2^{15}-1]$ for all intermediate values.
+
+\section{Results}
+
+Our implementation achieves a proving time of 12 seconds for a 6-layer transformer
+with $d=256$ on a single GPU, with a proof size of 1.2 KB.
+
+\end{document}
