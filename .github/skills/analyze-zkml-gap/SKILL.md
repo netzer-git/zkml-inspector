@@ -41,7 +41,9 @@ Run the paper parser to extract structured mathematical content:
 python .github/skills/analyze-zkml-gap/scripts/parse_paper.py "<paper_path>"
 ```
 
-Save the JSON output to a temporary file (e.g., `/tmp/paper_manifest.json`).
+Save the JSON output to a temporary file. Use a cross-platform temp directory:
+- **Linux/macOS**: `/tmp/paper_manifest.json`
+- **Windows**: `$env:TEMP\paper_manifest.json` (PowerShell) or `%TEMP%\paper_manifest.json` (cmd)
 
 **After running**, review the JSON output and summarize:
 - How many operators were found? List them.
@@ -60,7 +62,9 @@ Run the codebase inspector:
 python .github/skills/analyze-zkml-gap/scripts/inspect_codebase.py "<codebase_path>"
 ```
 
-Save the JSON output to a temporary file (e.g., `/tmp/code_manifest.json`).
+Save the JSON output to a temporary file. Use the same cross-platform temp directory as Stage 1:
+- **Linux/macOS**: `/tmp/code_manifest.json`
+- **Windows**: `$env:TEMP\code_manifest.json` (PowerShell) or `%TEMP%\code_manifest.json` (cmd)
 
 **After running**, review and summarize:
 - Which framework was detected? (EZKL, Halo2, Circom, etc.)

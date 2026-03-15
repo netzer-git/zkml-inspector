@@ -4,7 +4,7 @@
   "displayName": "zkML Inspector — Paper-to-Code Gap Analyzer",
   "description": "Analyzes gaps between zkML research papers and their implementations. Generates discrepancy & optimization reports covering logic gaps, performance bottlenecks, and soundness risks.",
   "author": "zkml-inspector",
-  "repository": "https://github.com/<owner>/zkml-inspector",
+  "repository": "https://github.com/zkml-inspector/zkml-inspector",
   "license": "MIT",
   "skills": [
     {

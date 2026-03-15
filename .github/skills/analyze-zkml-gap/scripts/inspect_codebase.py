@@ -118,7 +118,7 @@ FRAMEWORK_SIGNALS: dict[str, list[tuple[str, str, str]]] = {
 FILE_EXTENSIONS = {
     ".rs": "rust",
     ".py": "python",
-    ".circom": "javascript",
+    ".circom": "circom",
     ".cpp": "c++",
     ".c": "c++",
     ".hpp": "c++",
@@ -136,6 +136,7 @@ def detect_framework(root: Path) -> Framework:
         scores[fw_name] = 0
         evidence[fw_name] = []
         for file_glob, content_pattern, label in signals:
+            # rglob() already recurses, so strip the **/ prefix from glob patterns
             for fpath in root.rglob(file_glob.replace("**/", "")):
                 if fpath.is_file() and _is_scannable(fpath):
                     try:
@@ -298,10 +299,13 @@ def _get_operator_patterns(framework: Framework) -> dict[str, str]:
     elif framework.name == "circom":
         return CIRCOM_OPERATOR_PATTERNS
     else:
-        # Merge all patterns for unknown frameworks
-        merged = {}
-        merged.update(RUST_OPERATOR_PATTERNS)
-        merged.update(PYTHON_OPERATOR_PATTERNS)
+        # Merge all patterns for unknown frameworks, combining overlapping keys
+        merged = dict(RUST_OPERATOR_PATTERNS)
+        for key, pattern in PYTHON_OPERATOR_PATTERNS.items():
+            if key in merged:
+                merged[key] = f"(?:{merged[key]}|{pattern})"
+            else:
+                merged[key] = pattern
         return merged
 
 
@@ -461,9 +465,21 @@ def _extract_ezkl_precision(root: Path) -> PrecisionConfig:
             continue
 
         if "scale" in data:
+            if config.scale_bits is not None and config.scale_bits != data["scale"]:
+                print(
+                    f"WARNING: Conflicting scale config: was {config.scale_bits}, "
+                    f"now {data['scale']} (in {fpath.relative_to(root)})",
+                    file=sys.stderr,
+                )
             config.scale_bits = data["scale"]
             config.evidence.append(f"scale={data['scale']} in {fpath.relative_to(root)}")
         if "bits" in data:
+            if config.scale_bits is not None and config.scale_bits != data["bits"]:
+                print(
+                    f"WARNING: Conflicting bits config: was {config.scale_bits}, "
+                    f"now {data['bits']} (in {fpath.relative_to(root)})",
+                    file=sys.stderr,
+                )
             config.scale_bits = data["bits"]
             config.evidence.append(f"bits={data['bits']} in {fpath.relative_to(root)}")
         if "input_scale" in data:
@@ -534,15 +550,16 @@ def _extract_generic_precision(root: Path) -> PrecisionConfig:
 
 def validate_path(path_str: str) -> Path:
     """Validate and resolve the input path securely."""
+    # Reject path traversal BEFORE resolving to prevent bypass
+    if ".." in Path(path_str).parts:
+        print("ERROR: Path traversal (..) not allowed", file=sys.stderr)
+        sys.exit(1)
     path = Path(path_str).resolve()
     if not path.exists():
         print(f"ERROR: Path not found: {path}", file=sys.stderr)
         sys.exit(1)
     if not path.is_dir():
         print(f"ERROR: Not a directory: {path}", file=sys.stderr)
-        sys.exit(1)
-    if ".." in Path(path_str).parts:
-        print("ERROR: Path traversal (..) not allowed", file=sys.stderr)
         sys.exit(1)
     return path
 

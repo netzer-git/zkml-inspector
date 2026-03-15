@@ -20,7 +20,7 @@ Given a PDF/LaTeX paper and a local codebase, **zkml-inspector** generates a com
 1. Clone this repository into your project (or as a standalone workspace):
 
    ```bash
-   git clone https://github.com/<owner>/zkml-inspector.git
+   git clone https://github.com/zkml-inspector/zkml-inspector.git
    ```
 
 2. Install Python dependencies:
@@ -61,6 +61,11 @@ For a fast check of critical issues only:
 |------------|-----------------------------|
 | Paper      | PDF (`.pdf`), LaTeX (`.tex`) |
 | Codebase   | Rust (Halo2, EZKL), Python (EZKL), Circom, C++ |
+
+> **Note**: LaTeX (`.tex`) input produces significantly better results than PDF.
+> PDF parsing relies on text extraction which is inherently lossy — mathematical
+> notation, equations, and operator definitions may be missed or garbled.
+> When possible, prefer providing the original `.tex` source.
 
 ## Architecture
 

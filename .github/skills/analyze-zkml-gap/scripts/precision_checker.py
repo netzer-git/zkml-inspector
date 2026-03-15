@@ -175,10 +175,15 @@ def check_precision_gaps(
         ))
 
     # Summary
+    total_checks = (
+        sum(1 for op in paper_operators if op in OPERATOR_PRECISION_REQUIREMENTS)
+        + sum(1 for op in code_operators.values() if op.get("implementation_type") == "approximation")
+        + 2  # global checks: precision config existence + float assumption
+    )
     report = PrecisionReport(
         gaps=gaps,
         summary={
-            "total_checks": len(paper_operators) + 2,  # +2 for global checks
+            "total_checks": total_checks,
             "gaps_found": len(gaps),
             "critical": sum(1 for g in gaps if g.severity == "CRITICAL"),
             "warning": sum(1 for g in gaps if g.severity == "WARNING"),
@@ -211,10 +216,11 @@ def _check_paper_float_assumption(paper_manifest: dict) -> bool:
 
 def validate_json_path(path_str: str) -> dict:
     """Read and validate a JSON file."""
-    path = Path(path_str).resolve()
+    # Reject path traversal BEFORE resolving to prevent bypass
     if ".." in Path(path_str).parts:
         print("ERROR: Path traversal (..) not allowed", file=sys.stderr)
         sys.exit(1)
+    path = Path(path_str).resolve()
     if not path.exists():
         print(f"ERROR: File not found: {path}", file=sys.stderr)
         sys.exit(1)

@@ -1,5 +1,9 @@
 # zkML Discrepancy & Optimization Report
 
+<!-- TEMPLATE USAGE: Replace all {{PLACEHOLDER}} tokens with actual values.
+     These are filled in by the zkml-inspector agent during Stage 5 (Report Generation).
+     Do not use this template directly — it is consumed by the LLM agent. -->
+
 > **Paper**: {{PAPER_TITLE}}
 > **Codebase**: {{CODEBASE_PATH}}
 > **Framework**: {{FRAMEWORK_NAME}} ({{FRAMEWORK_LANGUAGE}})

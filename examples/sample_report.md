@@ -1,5 +1,9 @@
 # zkML Discrepancy & Optimization Report
 
+<!-- NOTE: This is a sample report for illustration purposes.
+     All file paths (e.g., src/ops/matmul.rs) are fictional and do not
+     correspond to actual files in this repository. -->
+
 > **Paper**: Efficient Zero-Knowledge Proofs for Neural Network Inference
 > **Codebase**: ./example-zkml-project/
 > **Framework**: EZKL (Python/Rust)

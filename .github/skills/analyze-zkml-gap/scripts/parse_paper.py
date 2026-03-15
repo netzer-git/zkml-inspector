@@ -112,7 +112,7 @@ OPERATOR_PATTERNS: dict[str, str] = {
     "Tanh": r"\btanh\b",
     "GELU": r"\bgelu\b",
     "SiLU": r"(?:\bsilu\b|\bswish\b)",
-    "Add": r"(?:element[\-\s]?wise\s*add(?:ition)?|residual\s*(?:add|connection))",
+    "Add": r"(?:element[\-\s]?wise\s*add(?:ition)?|residual\s*add(?:ition)?)",
     "Mul": r"(?:element[\-\s]?wise\s*mult(?:iplication)?|hadamard\s*product)",
     "MaxPool": r"(?:max[\s_]?pool(?:ing)?)",
     "AvgPool": r"(?:avg[\s_]?pool(?:ing)?|average[\s_]?pool(?:ing)?)",
@@ -201,11 +201,6 @@ def _extract_latex_environments(text: str) -> list[MathBlock]:
         r"\\end\{\1\}",
         re.DOTALL,
     )
-    current_section = ""
-    for match in re.finditer(r"\\(?:section|subsection)\{([^}]+)\}", text):
-        section_name = match.group(1)
-        # Store section context
-        current_section = section_name
 
     for match in env_pattern.finditer(text):
         env_name = match.group(1).rstrip("*")
@@ -329,7 +324,7 @@ def extract_constraints(text: str, blocks: list[MathBlock]) -> list[Constraint]:
         (r"(?:constraint|enforce|ensure|require|must\s+satisfy)\s*[:;]?\s*(.{10,200})", "equality"),
         (r"(?:range\s+(?:check|proof|constraint))\s*[:;]?\s*(.{10,200})", "range"),
         (r"(?:commit(?:ment)?(?:\s+to)?)\s*[:;]?\s*(.{10,200})", "commitment"),
-        (r"(\w+\s*[<>≤≥]=?\s*\w+(?:\s*[<>≤≥]=?\s*\w+)?)", "inequality"),
+        (r"(?:satisfy|bound|where|such\s+that|constraint)\s*:?\s*(\w+\s*[<>≤≥]=?\s*\w+(?:\s*[<>≤≥]=?\s*\w+)?)", "inequality"),
     ]
 
     for pattern, ctype in constraint_keywords:
@@ -458,16 +453,16 @@ def extract_metadata(text: str, fmt: str) -> dict:
 
 def validate_path(path_str: str) -> Path:
     """Validate and resolve the input path securely."""
+    # Reject path traversal BEFORE resolving to prevent bypass
+    if ".." in Path(path_str).parts:
+        print("ERROR: Path traversal (..) not allowed", file=sys.stderr)
+        sys.exit(1)
     path = Path(path_str).resolve()
     if not path.exists():
         print(f"ERROR: File not found: {path}", file=sys.stderr)
         sys.exit(1)
     if not path.is_file():
         print(f"ERROR: Not a file: {path}", file=sys.stderr)
-        sys.exit(1)
-    # Reject paths with .. components (after resolution this is implicit, but check original)
-    if ".." in Path(path_str).parts:
-        print("ERROR: Path traversal (..) not allowed", file=sys.stderr)
         sys.exit(1)
     return path
 

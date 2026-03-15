@@ -133,7 +133,7 @@ def estimate_operator_cost(
         return costs[0]
 
 
-def profile_gates(code_manifest: dict) -> CostProfile:
+def profile_gates(code_manifest: dict, cost_table: dict[str, tuple[int, int, int]] | None = None) -> CostProfile:
     """Profile gate costs for all operators in the codebase."""
     profile = CostProfile()
 
@@ -142,7 +142,7 @@ def profile_gates(code_manifest: dict) -> CostProfile:
     for op_data in code_operators:
         op_name = op_data["name"]
         impl_type = op_data.get("implementation_type", "exact")
-        gates = estimate_operator_cost(op_name, impl_type)
+        gates = estimate_operator_cost(op_name, impl_type, cost_table)
 
         is_killer = op_name in TRANSFORMER_KILLERS
 
@@ -173,11 +173,11 @@ def profile_gates(code_manifest: dict) -> CostProfile:
                 estimated_gates=op.estimated_gates,
                 percentage_of_total=round(pct, 1),
                 severity=severity,
-                recommendation=_bottleneck_recommendation(op),
+                recommendation=_bottleneck_recommendation(op, cost_table),
             ))
 
     # Generate recommendations
-    profile.recommendations = _generate_recommendations(profile)
+    profile.recommendations = _generate_recommendations(profile, cost_table)
 
     return profile
 
@@ -195,13 +195,13 @@ def _gate_breakdown(op_name: str, impl_type: str, gates: int) -> str:
         return f"{gates:,} gates ({impl_type})"
 
 
-def _bottleneck_recommendation(op: OperatorCost) -> str:
+def _bottleneck_recommendation(op: OperatorCost, cost_table: dict[str, tuple[int, int, int]] | None = None) -> str:
     """Generate a recommendation for a bottleneck operator."""
     if op.is_transformer_killer:
         if op.implementation_type == "exact":
             return (
                 f"Replace exact {op.name} with a lookup-table or piecewise-linear "
-                f"approximation. Expected savings: ~{op.estimated_gates - estimate_operator_cost(op.name, 'lookup'):,} gates"
+                f"approximation. Expected savings: ~{op.estimated_gates - estimate_operator_cost(op.name, 'lookup', cost_table):,} gates"
             )
         elif op.implementation_type == "approximation":
             return (
@@ -214,7 +214,7 @@ def _bottleneck_recommendation(op: OperatorCost) -> str:
         return f"Consider batching or optimizing {op.name} if it appears in a hot loop."
 
 
-def _generate_recommendations(profile: CostProfile) -> list[str]:
+def _generate_recommendations(profile: CostProfile, cost_table: dict[str, tuple[int, int, int]] | None = None) -> list[str]:
     """Generate overall optimization recommendations."""
     recs: list[str] = []
 
@@ -226,7 +226,7 @@ def _generate_recommendations(profile: CostProfile) -> list[str]:
     if exact_killers:
         names = ", ".join(op.name for op in exact_killers)
         total_savings = sum(
-            op.estimated_gates - estimate_operator_cost(op.name, "lookup")
+            op.estimated_gates - estimate_operator_cost(op.name, "lookup", cost_table)
             for op in exact_killers
         )
         recs.append(
@@ -303,10 +303,11 @@ def load_cost_table_from_markdown(md_path: str) -> dict[str, tuple[int, int, int
 
 def validate_json_path(path_str: str) -> dict:
     """Read and validate a JSON file."""
-    path = Path(path_str).resolve()
+    # Reject path traversal BEFORE resolving to prevent bypass
     if ".." in Path(path_str).parts:
         print("ERROR: Path traversal (..) not allowed", file=sys.stderr)
         sys.exit(1)
+    path = Path(path_str).resolve()
     if not path.exists():
         print(f"ERROR: File not found: {path}", file=sys.stderr)
         sys.exit(1)
@@ -330,14 +331,13 @@ def main() -> None:
     code_manifest = validate_json_path(sys.argv[1])
 
     # Optional: load custom cost table
+    cost_table = None
     if "--cost-table" in sys.argv:
         idx = sys.argv.index("--cost-table")
         if idx + 1 < len(sys.argv):
-            custom_table = load_cost_table_from_markdown(sys.argv[idx + 1])
-            # Override default costs with custom ones (not used directly in profile_gates yet)
-            DEFAULT_GATE_COSTS.update(custom_table)
+            cost_table = load_cost_table_from_markdown(sys.argv[idx + 1])
 
-    profile = profile_gates(code_manifest)
+    profile = profile_gates(code_manifest, cost_table)
     print(json.dumps(asdict(profile), indent=2, ensure_ascii=False))
 
 

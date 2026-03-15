@@ -10,7 +10,6 @@ tools:
   - search
   - web
   - todo
-model: "Claude Sonnet 4"
 argument-hint: "Describe the paper and codebase to analyze, e.g., 'Analyze paper.pdf against ./my-zkml-project/'"
 ---
 
