@@ -24,6 +24,26 @@
     {
       "name": "zkml-inspector",
       "path": ".github/agents/zkml-inspector.agent.md"
+    },
+    {
+      "name": "paper-analyst",
+      "path": ".github/agents/paper-analyst.agent.md"
+    },
+    {
+      "name": "code-inspector",
+      "path": ".github/agents/code-inspector.agent.md"
+    },
+    {
+      "name": "zkp-auditor",
+      "path": ".github/agents/zkp-auditor.agent.md"
+    },
+    {
+      "name": "precision-cost",
+      "path": ".github/agents/precision-cost.agent.md"
+    },
+    {
+      "name": "report-writer",
+      "path": ".github/agents/report-writer.agent.md"
     }
   ],
   "prompts": [
@@ -34,6 +54,14 @@
     {
       "name": "analyze-quick",
       "path": ".github/prompts/analyze-quick.prompt.md"
+    },
+    {
+      "name": "audit-soundness",
+      "path": ".github/prompts/audit-soundness.prompt.md"
+    },
+    {
+      "name": "inspect-code",
+      "path": ".github/prompts/inspect-code.prompt.md"
     }
   ],
   "requirements": {

@@ -1,12 +1,12 @@
 # zkml-inspector
 
-> A VS Code Copilot skill that analyzes the gap between zkML research papers and their implementations.
+> A multi-agent VS Code Copilot system that analyzes gaps between zkML research papers and their implementations.
 
-Given a PDF/LaTeX paper and a local codebase, **zkml-inspector** generates a comprehensive **Discrepancy & Optimization Report** covering:
+Given a PDF/LaTeX paper and a local codebase, **zkml-inspector** dispatches specialized sub-agents to generate a comprehensive **Discrepancy & Optimization Report** covering:
 
-- **Logic Gaps** — Missing constraints, non-deterministic operations, undocumented operators
-- **Performance Bottlenecks** — High-cost gates (Sigmoid, Tanh, Softmax), unoptimized "Transformer Killer" operations
-- **Soundness Risks** — Zero-knowledge property violations, unsound approximations, missing range checks
+- **Soundness Violations** — Missing constraints, uncommitted weights, unconstrained wires, layer-skip attacks
+- **ZKP Lifecycle Gaps** — Incomplete setup/commitment, proving, or verification phases
+- **Performance Bottlenecks** — High-cost gates, unoptimized "Transformer Killer" operations (Softmax, LayerNorm, GELU)
 - **Precision Mismatches** — Fixed-point scaling errors between paper assumptions and code reality
 
 ## Installation
@@ -29,13 +29,13 @@ Given a PDF/LaTeX paper and a local codebase, **zkml-inspector** generates a com
    pip install -r .github/skills/analyze-zkml-gap/scripts/requirements.txt
    ```
 
-3. The skill and agent are automatically discovered by VS Code Copilot from the `.github/` directory.
+3. The agents are automatically discovered by VS Code Copilot from the `.github/` directory.
 
 ## Usage
 
-### Full Analysis
+### Full Analysis (paper + code)
 
-In VS Code Copilot Chat, invoke the agent:
+In VS Code Copilot Chat, invoke the orchestrator agent:
 
 ```
 @zkml-inspector Analyze the paper at ./paper.pdf against the codebase at ./my-zkml-project/
@@ -47,12 +47,22 @@ Or use the prompt shortcut:
 /analyze-full paper=./paper.tex codebase=./src/
 ```
 
-### Quick Scan
-
-For a fast check of critical issues only:
+### Quick Scan (critical issues only)
 
 ```
 /analyze-quick paper=./paper.pdf codebase=./src/
+```
+
+### Soundness Audit (code only, no paper)
+
+```
+/audit-soundness codebase=./src/
+```
+
+### Code Inspection (structure overview)
+
+```
+/inspect-code codebase=./src/
 ```
 
 ### Supported Inputs
@@ -69,24 +79,51 @@ For a fast check of critical issues only:
 
 ## Architecture
 
+The system uses an **orchestrator + 5 sub-agents** pattern:
+
+```
+zkml-inspector (orchestrator)
+  ├── paper-analyst     — Extracts claims from research papers with ZKP understanding
+  ├── code-inspector    — Maps codebase to the commit/prove/verify lifecycle
+  ├── zkp-auditor       — Core soundness reasoning, can ask follow-ups to agents 1 & 2
+  ├── precision-cost    — Fixed-point precision gaps and gate cost estimation
+  └── report-writer     — Assembles all findings into final Markdown report
+```
+
+All analysis agents share a common ZKP knowledge foundation
+(`references/zkp_foundations.md`) covering the commit → prove → verify lifecycle.
+
+### Pipeline Flow
+
+```
+1. paper-analyst + code-inspector  (parallel — independent extraction)
+2. zkp-auditor                     (cross-references both, can ask follow-ups)
+3. precision-cost                  (gate costs and precision analysis)
+4. report-writer                   (assembles final Markdown report)
+```
+
+### File Structure
+
 ```
 .github/
-├── skills/analyze-zkml-gap/
-│   ├── SKILL.md              # Core skill — 5-stage reasoning pipeline
-│   ├── scripts/              # Python analysis scripts
-│   ├── references/           # zkML knowledge base
-│   └── assets/               # Report templates
-├── agents/zkml-inspector.agent.md
-└── prompts/                  # analyze-full, analyze-quick
+├── agents/
+│   ├── zkml-inspector.agent.md   # Orchestrator
+│   ├── paper-analyst.agent.md    # Paper extraction sub-agent
+│   ├── code-inspector.agent.md   # Code inspection sub-agent
+│   ├── zkp-auditor.agent.md      # Soundness auditor sub-agent
+│   ├── precision-cost.agent.md   # Precision & cost sub-agent
+│   └── report-writer.agent.md    # Report generation sub-agent
+├── prompts/
+│   ├── analyze-full.prompt.md    # Full paper vs. code analysis
+│   ├── analyze-quick.prompt.md   # Quick scan for critical issues
+│   ├── audit-soundness.prompt.md # Code-only soundness audit
+│   └── inspect-code.prompt.md    # Code-only inspection
+└── skills/analyze-zkml-gap/
+    ├── SKILL.md                  # Shared library documentation
+    ├── scripts/                  # Python analysis scripts
+    ├── references/               # ZKP knowledge base (foundations, operators, etc.)
+    └── assets/                   # Report templates
 ```
-
-### Analysis Pipeline
-
-1. **Paper Parsing** — Extract mathematical constraints, operators, and approximations from LaTeX/PDF
-2. **Codebase Inspection** — Auto-detect framework, extract operator implementations and constraint definitions
-3. **Gap Analysis** — Agent-driven reasoning: operator coverage, constraint completeness, Transformer Killer detection
-4. **Precision Validation** — Compare fixed-point scaling between paper and code
-5. **Report Generation** — Markdown report with severity-tagged findings and recommendations
 
 ## Supported Frameworks
 

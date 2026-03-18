@@ -2,7 +2,30 @@
 
 ## Project Overview
 
-zkml-inspector analyzes gaps between zkML (zero-knowledge machine learning) research papers and their implementations. Given a PDF/LaTeX paper and a codebase, it generates a Discrepancy & Optimization Report.
+zkml-inspector analyzes gaps between zkML (zero-knowledge machine learning) research papers and their implementations. It uses a multi-agent architecture where specialized sub-agents handle paper analysis, code inspection, ZKP soundness auditing, precision/cost analysis, and report generation.
+
+## Architecture: Agent Dispatch Model
+
+The system uses an **orchestrator + 5 sub-agents** pattern:
+
+```
+zkml-inspector (orchestrator)
+  ├── paper-analyst     — Extracts claims from research papers with ZKP understanding
+  ├── code-inspector    — Maps codebase to the commit/prove/verify lifecycle
+  ├── zkp-auditor       — Core soundness reasoning, can ask follow-ups to agents 1 & 2
+  ├── precision-cost    — Fixed-point precision gaps and gate cost estimation
+  └── report-writer     — Assembles all findings into final Markdown report
+```
+
+All three analysis agents (paper-analyst, code-inspector, zkp-auditor) share a
+common ZKP knowledge foundation: `.github/skills/analyze-zkml-gap/references/zkp_foundations.md`
+
+### Key Design Principles:
+- Every sub-agent understands ZKP fundamentals (commit → prove → verify lifecycle)
+- paper-analyst is accountable for extracting ZKP-relevant claims, not just operators
+- code-inspector is accountable for mapping code to ZKP lifecycle phases
+- zkp-auditor can request follow-ups from paper-analyst and code-inspector
+- Each agent is independently invocable for standalone tasks
 
 ## Language & Runtime
 
@@ -51,92 +74,36 @@ pip install -r .github/skills/analyze-zkml-gap/scripts/requirements.txt
 python -m pytest tests/
 ```
 
-## Agent Role
+## Agent Files
 
-You are **zkml-inspector**, a Senior ZK Cryptography Engineer and ML Systems Auditor.
+- `.github/agents/zkml-inspector.agent.md` — Orchestrator agent
+- `.github/agents/paper-analyst.agent.md` — Paper extraction sub-agent
+- `.github/agents/code-inspector.agent.md` — Code inspection sub-agent
+- `.github/agents/zkp-auditor.agent.md` — Soundness auditor sub-agent
+- `.github/agents/precision-cost.agent.md` — Precision & cost sub-agent
+- `.github/agents/report-writer.agent.md` — Report generation sub-agent
 
-### Expertise
+## Prompt Files
 
-- Zero-knowledge proof systems: Groth16, Plonk, Halo2, Nova/IVC, Plonky2
-- zkML frameworks: EZKL, Circom-ML, Halo2-ML, custom implementations
-- Transformer architecture and its "Transformer Killer" operations in ZK
-- Fixed-point arithmetic, quantization, and precision analysis
-- Circuit optimization and constraint minimization
-
-### Communication Style
-
-- Be precise and technical — your audience is ZK engineers
-- Always cite specific files, line numbers, and code snippets
-- Distinguish between "the paper says X" and "the code does Y"
-- When something is ambiguous, flag it as WARNING and explain both interpretations
-- Use mathematical notation where appropriate
-
-## Analysis Pipeline
-
-When a user asks to analyze a paper against a codebase, follow these 5 stages in order.
-
-### Stage 1: Paper Parsing
-
-```bash
-python .github/skills/analyze-zkml-gap/scripts/parse_paper.py "<paper_path>"
-```
-
-Save JSON output to a temp file. Review: operator count, constraints, approximation strategies, Transformer Killer operators (Softmax, LayerNorm, GELU, Sigmoid, Tanh). If the parser returns few results, supplement by reading the paper directly.
-
-### Stage 2: Codebase Inspection
-
-```bash
-python .github/skills/analyze-zkml-gap/scripts/inspect_codebase.py "<codebase_path>"
-```
-
-Save JSON output to a temp file. Review: detected framework (EZKL, Halo2, Circom, etc.), implemented operators, constraint count, precision configuration.
-
-### Stage 3: Gap Analysis
-
-For each operator in the paper, determine code status:
-
-| Status | Meaning |
-|--------|---------|
-| ✅ IMPLEMENTED | Found in code, exact match |
-| ⚠️ APPROXIMATED | Found but uses approximation — check error bound |
-| ❌ MISSING | Not found in code at all |
-| ➕ UNDOCUMENTED | In code but NOT in paper |
-
-Check constraint completeness using `.github/skills/analyze-zkml-gap/references/soundness_checklist.md`:
-1. Weight Commitment — Are all model weights committed?
-2. Intermediate Constraints — Are all layer outputs constrained?
-3. Non-Determinism — Is dropout removed? Are operations deterministic?
-4. Range Checks — Are fixed-point values range-checked?
-5. Approximation Soundness — Are approximation errors bounded?
-6. Quantization — Does quantization match the paper?
-7. Zero-Knowledge — Are private inputs protected?
-
-For Transformer Killers, cross-reference with `.github/skills/analyze-zkml-gap/references/approximation_db.md`.
-
-### Stage 4: Precision & Cost Validation
-
-```bash
-python .github/skills/analyze-zkml-gap/scripts/precision_checker.py "<paper_manifest.json>" "<code_manifest.json>"
-python .github/skills/analyze-zkml-gap/scripts/gate_cost_profiler.py "<code_manifest.json>"
-```
-
-Flag precision gaps and the top-3 most expensive operators.
-
-### Stage 5: Report Generation
-
-Use the template at `.github/skills/analyze-zkml-gap/assets/report_template.md`. Every finding must have severity (`CRITICAL`/`WARNING`/`INFO`), location, description, and recommendation.
-
-Severity guide:
-- `CRITICAL`: Breaks soundness, ZK property, or allows cheating proofs
-- `WARNING`: Affects accuracy or security in edge cases; approximation error concerns
-- `INFO`: Best practice recommendation; cosmetic or documentation issue
+- `.github/prompts/analyze-full.prompt.md` — Full paper vs. code analysis
+- `.github/prompts/analyze-quick.prompt.md` — Quick scan for critical issues only
+- `.github/prompts/audit-soundness.prompt.md` — Code-only soundness audit
+- `.github/prompts/inspect-code.prompt.md` — Code-only inspection
 
 ## Reference Files
 
+- `.github/skills/analyze-zkml-gap/references/zkp_foundations.md` — Shared ZKP knowledge for all agents
 - `.github/skills/analyze-zkml-gap/references/operator_catalog.md` — 30+ operators with ZK patterns
 - `.github/skills/analyze-zkml-gap/references/soundness_checklist.md` — 7-point security audit
 - `.github/skills/analyze-zkml-gap/references/approximation_db.md` — Approximation strategies with error bounds
 - `.github/skills/analyze-zkml-gap/references/gate_cost_table.md` — Cost estimates by operator
+
+## Analysis Scripts
+
+- `.github/skills/analyze-zkml-gap/scripts/parse_paper.py` — LaTeX/PDF parser (used by paper-analyst)
+- `.github/skills/analyze-zkml-gap/scripts/inspect_codebase.py` — Code scanner (used by code-inspector)
+- `.github/skills/analyze-zkml-gap/scripts/precision_checker.py` — Precision gap checker (used by precision-cost)
+- `.github/skills/analyze-zkml-gap/scripts/gate_cost_profiler.py` — Gate cost estimator (used by precision-cost)
 
 ## Supported Inputs
 

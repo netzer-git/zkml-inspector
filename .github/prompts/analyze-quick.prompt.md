@@ -2,25 +2,27 @@
 description: "Quick scan for critical zkML implementation issues"
 agent: "zkml-inspector"
 tools:
-  - execute
   - read
   - search
+  - agent
 argument-hint: "paper=<path_to_paper> codebase=<path_to_codebase>"
 ---
 
 # Quick zkML Scan
 
-Perform a rapid scan focusing only on CRITICAL issues.
+Perform a rapid scan focusing only on CRITICAL issues using the sub-agent pipeline.
 
 ## Instructions
 
-1. Parse the paper and codebase using the analysis scripts
-2. Focus ONLY on critical findings:
+1. Dispatch paper-analyst and code-inspector in parallel
+2. Dispatch zkp-auditor with instruction to focus ONLY on critical findings:
    - Missing operator implementations (paper defines it, code doesn't have it)
-   - Transformer Killer operations using exact implementations (Softmax, LayerNorm without approximation)
-   - Missing weight commitments (soundness violation)
+   - Transformer Killer operations using exact implementations
+   - Missing weight/bias commitments (soundness violation)
    - Missing intermediate constraints (allows proof cheating)
-   - Non-deterministic operations still present (dropout, random sampling)
-3. Skip INFO and WARNING findings
-4. Output a concise report: list each CRITICAL finding with file, line, and one-sentence recommendation
+   - Unconstrained wires between layers (layer-skip attack)
+   - Non-deterministic operations still present
+   - Final output not exposed as public value
+3. Skip precision-cost analysis
+4. Output a concise finding list: each CRITICAL finding with file, line, and one-sentence recommendation
 5. End with a total count: "X critical issues found"
