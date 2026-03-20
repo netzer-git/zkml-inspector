@@ -153,6 +153,63 @@ Are there range checks after multiplications? Does the accumulator have sufficie
 
 ---
 
+## First-Principles Constraint Derivation
+
+Static checklists and operator catalogs cannot cover novel mathematical
+constructs introduced by new papers. Every agent MUST be able to derive
+what correct constraints look like from the math itself.
+
+For ANY mathematical operation — known or novel — apply this procedure:
+
+### Step 1: State the mathematical claim
+
+Write down the exact function: $y = f(x_1, ..., x_n)$.
+Include every parameter (weights, biases, scale factors, lookup entries).
+
+### Step 2: Decompose into field-representable parts
+
+Arithmetic circuits only support addition and multiplication over a finite
+field. Decompose $f$ into:
+- **Polynomial parts** — directly expressible as constraints
+- **Non-polynomial parts** — require approximation, lookup, or decomposition
+- **Auxiliary variables** — intermediate values introduced by the decomposition
+
+For each non-polynomial part, identify what strategy is used (approximation,
+lookup, bit-decomposition) and what replacement function $\hat{f}$ it creates.
+
+### Step 3: Derive the required constraints
+
+For each part of the decomposition, write the constraint polynomial
+$p(...) = 0$ that enforces correctness. Then verify:
+
+1. **Sufficiency**: Does $p = 0$ actually force $y = f(x, w)$?
+   (Or can the prover satisfy $p = 0$ with a wrong $y$?)
+2. **Necessity**: Does $p = 0$ reject all invalid witness values?
+   (Or are there "free variables" — witness values not pinned down?)
+3. **Completeness of auxiliary variables**: Every helper variable introduced
+   must itself be constrained. An unconstrained auxiliary is a free variable.
+
+### Step 4: Check the boundaries
+
+- **Inputs**: Is there a range assumption? What happens at the boundary?
+- **Outputs**: Is the output bound to the next operation's input?
+- **Committed values**: Every parameter that affects the constraint output
+  must be committed, or the prover can choose it freely.
+
+### Step 5: Characterize the gap
+
+If the constraint is weaker than the stated math, describe precisely
+what extra solutions it permits. This is the attack surface.
+
+Example: A Softmax constraint that only enforces $\sum y_i = 1$ permits
+the prover to output ANY probability distribution — the binding between
+each $y_i$ and $e^{x_i}$ is missing.
+
+**Agents must apply this procedure to EVERY construct they encounter,
+especially novel ones not found in the operator catalog.**
+
+---
+
 ## Transformer Killers — Why Non-Polynomial Ops Matter
 
 Arithmetic circuits can only express polynomial constraints natively

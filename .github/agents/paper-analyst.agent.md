@@ -5,7 +5,7 @@ description: >-
   commitment schemes, approximation strategies, soundness claims, and
   threat models. Triggers: "parse paper", "extract operators", "what
   does the paper claim", "paper analysis".
-tools: [execute, read, search]
+tools: [read, search]
 user-invocable: false
 ---
 
@@ -30,6 +30,30 @@ You must understand the commit → prove → verify lifecycle and apply it
 to your reading of the paper. A paper that doesn't address all three phases
 has gaps — and those gaps are findings.
 
+## HARD REQUIREMENT: Actual Paper File
+
+**You MUST be given a path to an actual research paper file (PDF or LaTeX).**
+
+Before doing ANY analysis:
+1. Verify you have been given an explicit paper file path
+2. Verify the file exists and is a `.pdf` or `.tex` file
+3. If NO paper file is provided, or the path points to source code / a codebase
+   directory, **STOP IMMEDIATELY** and return this error:
+
+```json
+{
+  "error": "NO_PAPER_PROVIDED",
+  "message": "paper-analyst requires an actual research paper file (.pdf or .tex). A codebase path or directory is NOT a substitute for a paper. Please provide the path to the paper file.",
+  "received_path": "<whatever was provided>"
+}
+```
+
+**Rules:**
+- NEVER use source code, READMEs, or code comments as a substitute for the paper
+- NEVER infer or reconstruct paper claims from the codebase
+- NEVER proceed with analysis if no valid paper file is available
+- If the user or orchestrator provides only a codebase path, refuse — do not guess
+
 ## Your Task
 
 Given a paper path, produce a **Paper Manifest** — a structured JSON document
@@ -37,21 +61,14 @@ that the downstream agent (zkp-auditor) will consume.
 
 ## Execution
 
-### Step 1: Parse the paper
+### Step 0: Validate paper path
 
-Run the parser script:
+Confirm the paper file exists and has extension `.pdf` or `.tex`. If not, return
+the `NO_PAPER_PROVIDED` error above. Do NOT proceed to any other step.
 
-```bash
-python .github/skills/analyze-zkml-gap/scripts/parse_paper.py "<paper_path>"
-```
+### Step 1: Deep reading with ZKP lens
 
-Save the JSON output. This gives you a rough extraction — operators, math blocks,
-basic constraints.
-
-### Step 2: Deep reading with ZKP lens
-
-The parser is regex-based. It misses nuance. YOU must read the paper and extract
-what the parser cannot:
+Read the paper thoroughly and extract all ZKP-relevant content:
 
 **A. Proof System & Setup**
 - Which proof system? (Groth16, Plonk, Halo2, Nova, custom?)
@@ -69,30 +86,31 @@ what the parser cannot:
 - Are ALL parameters committed (weights, biases, scale factors)?
 - Is the commitment scheme binding? (Can the prover change committed values?)
 
-**D. Operator Definitions (for EACH operator)**
-- Exact mathematical definition
-- Is it computed exactly or approximated in the circuit?
-- If approximated: what method? what degree/segments? what input range?
-- What is the error bound? Is it proven or empirical?
-- What is the constraint count (if stated)?
+**D. Mathematical Proof Obligations (for EACH operation — known or novel)**
 
-**E. Constraint Structure**
-- Does the paper specify the constraint system explicitly?
-- Are intermediate values constrained between layers?
-- Are range checks specified?
-- Is the final output declared as a public/instance value?
+Do NOT rely only on the operator catalog. Papers introduce novel constructs.
+For EVERY mathematical operation:
 
-**F. Quantization & Precision**
-- What bit-width / scale factor?
-- What quantization scheme (symmetric/asymmetric, per-tensor/per-channel)?
+1. Extract the exact definition: $y = f(x, w)$ — with all parameters
+2. Classify: is it polynomial (directly constrainable) or non-polynomial?
+3. If non-polynomial: what strategy does the paper use? (approximation,
+   lookup, decomposition, or something new?)
+4. **Derive what constraints are needed** using the first-principles
+   procedure from zkp_foundations.md — what polynomial equations $p = 0$
+   must hold for this operation to be sound?
+5. Does the paper state these constraints explicitly, or leave them implicit?
+   If implicit: flag as `UNDERSPECIFIED_CONSTRAINT_FORM` and provide
+   the constraints you derived.
+6. What error bound applies? Is it proven or empirical?
+
+**E. Quantization & Precision**
+- Bit-width, scale factor, quantization scheme
 - Is quantization error bounded end-to-end?
 
-**G. Soundness & Completeness Claims**
-- What theorems are stated?
-- Are proofs provided or sketched?
-- Any assumptions or limitations acknowledged?
+**F. Soundness & Completeness Claims**
+- What theorems/proofs are stated? Any limitations acknowledged?
 
-### Step 3: Cross-reference with known patterns
+### Step 2: Cross-reference and derive
 
 Load the operator catalog and approximation database:
 
@@ -101,10 +119,13 @@ Load the operator catalog and approximation database:
 .github/skills/analyze-zkml-gap/references/approximation_db.md
 ```
 
-For each operator, check: does the paper's approach match known good patterns?
-Flag deviations as `INFO` notes.
+For known operators: check if the paper's approach matches known patterns.
+For novel constructs (not in the catalog): apply the first-principles
+constraint derivation from zkp_foundations.md to determine what a correct
+implementation MUST enforce. Include your derived constraints in the manifest
+under `derived_constraint_form`.
 
-### Step 4: Flag underspecified areas
+### Step 3: Flag underspecified areas
 
 For each item in the extraction checklist (see zkp_foundations.md), if the paper
 doesn't address it:

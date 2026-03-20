@@ -29,13 +29,13 @@ common ZKP knowledge foundation: `.github/skills/analyze-zkml-gap/references/zkp
 
 ## Language & Runtime
 
-- Python 3.10+ for all scripts
+- Python 3.10+ (for tests only)
 - Type hints on all function signatures
 - UTF-8 encoding everywhere
 
 ## Security Boundaries
 
-- Scripts MUST only read files within the user-provided paper path and codebase path
+- Agents MUST only read files within the user-provided paper path and codebase path
 - Never execute code from the analyzed codebase — only read and parse
 - Never write outside the current working directory
 - Sanitize all file paths before use (resolve symlinks, reject `..` traversals)
@@ -49,8 +49,8 @@ common ZKP knowledge foundation: `.github/skills/analyze-zkml-gap/references/zkp
 
 ## Code Style
 
-- Scripts are standalone CLI tools invokable via `python script.py <args>`
-- All scripts output JSON to stdout (parseable by the agent)
+- Reference data is stored in Markdown files under the skill directory
+- All agents output JSON to stdout (parseable by the orchestrator)
 - Errors go to stderr
 - Exit code 0 = success, 1 = error
 
@@ -64,9 +64,9 @@ common ZKP knowledge foundation: `.github/skills/analyze-zkml-gap/references/zkp
 
 ## Install Dependencies
 
-```bash
-pip install -r .github/skills/analyze-zkml-gap/scripts/requirements.txt
-```
+No Python dependencies required. The agent pipeline relies on built-in
+LLM capabilities for analysis. Reference data is stored in Markdown files
+under `.github/skills/analyze-zkml-gap/references/`.
 
 ## Running Tests
 
@@ -96,13 +96,6 @@ python -m pytest tests/
 - `.github/skills/analyze-zkml-gap/references/soundness_checklist.md` — 7-point security audit
 - `.github/skills/analyze-zkml-gap/references/approximation_db.md` — Approximation strategies with error bounds
 - `.github/skills/analyze-zkml-gap/references/gate_cost_table.md` — Cost estimates by operator
-
-## Analysis Scripts
-
-- `.github/skills/analyze-zkml-gap/scripts/parse_paper.py` — LaTeX/PDF parser (used by paper-analyst)
-- `.github/skills/analyze-zkml-gap/scripts/inspect_codebase.py` — Code scanner (used by code-inspector)
-- `.github/skills/analyze-zkml-gap/scripts/precision_checker.py` — Precision gap checker (used by zkp-auditor)
-- `.github/skills/analyze-zkml-gap/scripts/gate_cost_profiler.py` — Gate cost estimator (used by zkp-auditor)
 
 ## Supported Inputs
 

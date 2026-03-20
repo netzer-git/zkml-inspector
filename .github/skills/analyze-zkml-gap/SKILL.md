@@ -18,15 +18,6 @@ dispatches sub-agents that use these resources.
 
 ## Contents
 
-### Scripts (used by sub-agents)
-
-| Script | Used By | Purpose |
-|--------|---------|---------|
-| `scripts/parse_paper.py` | paper-analyst | Extract operators, constraints, math from LaTeX/PDF |
-| `scripts/inspect_codebase.py` | code-inspector | Detect framework, extract operators, constraints from code |
-| `scripts/precision_checker.py` | zkp-auditor | Compare fixed-point precision between paper and code |
-| `scripts/gate_cost_profiler.py` | zkp-auditor | Estimate circuit gate costs per operator |
-
 ### References (loaded by sub-agents as needed)
 
 | Reference | Used By | Purpose |

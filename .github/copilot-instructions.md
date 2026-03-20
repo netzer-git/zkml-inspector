@@ -1,12 +1,12 @@
 # zkml-inspector — Project Conventions
 
 ## Language & Runtime
-- Python 3.10+ for all scripts
+- Python 3.10+ (for tests only)
 - Type hints on all function signatures
 - UTF-8 encoding everywhere
 
 ## Security Boundaries
-- Scripts MUST only read files within the user-provided paper path and codebase path
+- Agents MUST only read files within the user-provided paper path and codebase path
 - Never execute code from the analyzed codebase — only read and parse
 - Never write outside the current working directory
 - Sanitize all file paths before use (resolve symlinks, reject `..` traversals)
@@ -18,8 +18,8 @@
 - Tables use GitHub-Flavored Markdown syntax
 
 ## Code Style
-- Scripts are standalone CLI tools invokable via `python script.py <args>`
-- All scripts output JSON to stdout (parseable by the agent)
+- Reference data is stored in Markdown files under the skill directory
+- All agents output JSON to stdout (parseable by the orchestrator)
 - Errors go to stderr
 - Exit code 0 = success, 1 = error
 

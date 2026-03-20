@@ -4,7 +4,7 @@ description: >-
   commitment structure, and precision configuration. Use when analyzing
   implementation code for a zkML project. Triggers: "inspect codebase",
   "extract code operators", "what does the code implement", "code analysis".
-tools: [execute, read, search]
+tools: [read, search]
 user-invocable: false
 ---
 
@@ -34,19 +34,27 @@ those gaps are findings.
 Given a codebase path, produce a **Code Manifest** — a structured JSON document
 that the downstream agent (zkp-auditor) will consume.
 
+## Framework Detection Guide
+
+Detect the ZK framework by examining dependency files and import patterns:
+
+| Framework | Dependency Signals | Content Signals |
+|-----------|-------------------|-----------------|
+| **halo2** | `halo2_proofs` in Cargo.toml | `use halo2_proofs`, `Circuit`, `ConstraintSystem` |
+| **ezkl** | `ezkl` in requirements.txt/Cargo.toml | `import ezkl`, `RunArgs`, `GraphCircuit` |
+| **circom** | `.circom` files present | `template`, `signal`, `<==`, `==>` |
+| **plonky2** | `plonky2` in Cargo.toml | `use plonky2`, `CircuitBuilder` |
+| **gnark** | `gnark` in go.mod | `frontend.Circuit`, `cs.Add` |
+| **custom** | None of the above | Manual circuit construction |
+
+Also detect the primary language from file extensions (`.rs` → Rust,
+`.py` → Python, `.circom` → Circom, `.cpp`/`.cu` → C++, `.go` → Go).
+
 ## Execution
 
-### Step 1: Run the automated inspector
+### Step 1: Map code to ZKP lifecycle
 
-```bash
-python .github/skills/analyze-zkml-gap/scripts/inspect_codebase.py "<codebase_path>"
-```
-
-Save the JSON output. This gives you framework detection and operator extraction.
-
-### Step 2: Map code to ZKP lifecycle
-
-The automated inspector finds operators. YOU must understand the circuit structure:
+Read the codebase and understand the circuit structure:
 
 **A. Setup & Commitment Phase**
 
@@ -62,11 +70,16 @@ Search for and document:
 For EACH operator found by the inspector:
 1. Read the implementation code (not just the function name)
 2. Determine: is this an EXACT computation, APPROXIMATION, or LOOKUP?
-3. Trace the constraint chain:
-   - Is the output of this operation constrained?
-   - Is the output wire connected to the next operation's input?
-   - Are there range checks on the output?
-4. For approximations: what method? How many segments/degree? What input range?
+3. **Extract what the constraint actually enforces** — not just whether
+   it exists, but WHAT mathematical relationship it encodes:
+   - In Halo2: read `create_gate()` closures and `constrain_equal()` calls
+   - In Circom: read `===` constraint expressions
+   - In EZKL: trace which ONNX ops map to which circuit gates
+   - Express the constraint algebraically (e.g., "enforces $y - Wx - b = 0$")
+   - Identify any witness values that are assigned but NOT determined by the
+     constraints — these are "free variables" and a soundness risk
+4. Verify wire connectivity: is the output wire the same as the next op's input?
+5. For approximations: what method? How many segments/degree? What input range?
 
 **C. Verification Phase**
 
@@ -75,15 +88,18 @@ Search for and document:
 - What public values does the verifier receive?
 - Is the final model output exposed as a public/instance value?
 
-**D. Constraint Completeness**
+**D. Constraint Completeness & Correctness**
 
-For each layer/operator, answer:
+For each layer/operator:
 - Is `output = f(input, weights)` enforced as a constraint?
-- Are there any assignments without constraints (advice values assigned
-  but not constrained are CRITICAL findings)?
+- **Does the constraint enforce the RIGHT function?** Apply the first-principles
+  derivation from zkp_foundations.md: compare the constraint polynomial you
+  extracted in step B.3 against the mathematical definition of the operation.
+  Flag if they differ (missing terms, wrong decomposition, etc.).
+- Are there any assignments without constraints (CRITICAL)?
 - Are there conditional branches? If so, are both branches constrained?
 
-### Step 3: Extract precision configuration
+### Step 2: Extract precision configuration
 
 Beyond what the inspector finds, manually search for:
 - Scale/bits configuration (`scale`, `bits`, `precision`, `quantize`, `SCALE`)
@@ -91,14 +107,14 @@ Beyond what the inspector finds, manually search for:
 - Fixed-point utilities (`fixed_point`, `rescale`, `truncate`, `shift`)
 - Overflow guards (`range_check`, `overflow`, `clip`, `saturate`)
 
-### Step 4: Detect non-determinism
+### Step 3: Detect non-determinism
 
 Search for operations that break proof determinism:
 - `dropout`, `random`, `sample`, `stochastic`, `rand`, `seed`
 - Data-dependent branching without constraint enforcement
 - Floating-point operations (should be fixed-point in ZK)
 
-### Step 5: Flag unclear areas
+### Step 4: Flag unclear areas
 
 For each item in the extraction checklist (see zkp_foundations.md), if the code
 doesn't clearly address it:

@@ -6,7 +6,7 @@ description: >-
   auditing zkML circuit soundness, finding proof-system vulnerabilities,
   or checking constraint completeness. Triggers: "audit soundness",
   "check constraints", "zkp security", "soundness analysis", "proof audit".
-tools: [execute, read, search, agent]
+tools: [read, search, agent]
 user-invocable: false
 agents: [paper-analyst, code-inspector]
 ---
@@ -66,11 +66,20 @@ each phase:
 **A2. Proving & Constraint Enforcement**
 - For EACH operator in the paper:
   1. Is it in the code? → If not: `MISSING` (CRITICAL)
-  2. Is it constrained? → If not: `UNCONSTRAINED` (CRITICAL — prover can substitute arbitrary values)
-  3. Is it the same function? → Compare paper's definition with code's implementation
-     - Same: `IMPLEMENTED`
-     - Different approximation than paper specifies: `APPROXIMATION_MISMATCH` (WARNING)
-     - Completely different function (e.g., ReLU replacing GELU): `SUBSTITUTION` (CRITICAL)
+  2. Is it constrained? → If not: `UNCONSTRAINED` (CRITICAL)
+  3. **Is the constraint mathematically correct?** This is the core check:
+     - Take the paper's definition: $y = f(x, w)$
+     - Take the code's constraint expression (from code-inspector manifest)
+     - Apply first-principles derivation (zkp_foundations.md): does the
+       constraint polynomial $p = 0$ enforce $y = f(x, w)$ and ONLY that?
+     - If the code's constraint admits solutions where $y \neq f(x, w)$,
+       it is **under-constrained** → `UNDER_CONSTRAINED` (CRITICAL)
+     - If the constraint encodes a different function entirely → `SUBSTITUTION` (CRITICAL)
+     - If it's a different approximation → `APPROXIMATION_MISMATCH` (WARNING)
+     - If correct → `IMPLEMENTED`
+  4. For novel constructs not in the operator catalog: derive the expected
+     constraints from the paper's math and compare against what the code enforces.
+     Do NOT skip novel operations just because they're unfamiliar.
 - For EACH operator in the code not in the paper: `UNDOCUMENTED` (INFO)
 - Wire connectivity: Are all layer outputs connected to next layer inputs?
 - Final output: Is it exposed as a public value?
@@ -90,14 +99,21 @@ For each check:
 
 **Critical soundness patterns to detect:**
 
+The patterns below are common, but they are NOT exhaustive. Novel papers
+introduce novel constructs with novel failure modes. Always apply
+first-principles derivation (zkp_foundations.md) to identify gaps that
+don't match any known pattern.
+
 | Pattern | Description | Severity |
 |---------|-------------|----------|
+| Under-constrained op | Constraint exists but allows incorrect outputs (missing terms, wrong decomposition) | CRITICAL |
 | Layer-skip attack | A layer's output is unconstrained — prover can skip the layer | CRITICAL |
 | Weight substitution | Weights not committed — prover uses a different model | CRITICAL |
 | Wire disconnect | Layer N output ≠ Layer N+1 input (different wires) | CRITICAL |
 | Range overflow | Fixed-point accumulation without range checks → field wrap-around | CRITICAL |
 | Approximation escape | Input falls outside approximation range → undefined behavior | CRITICAL |
 | Output hiding | Final output not public — verifier can't check result | CRITICAL |
+| Free witness variable | Witness value not determined by constraints — prover picks freely | CRITICAL |
 | Bias omission | Bias vectors not committed — prover can shift outputs | WARNING |
 | Precision mismatch | Paper assumes 16-bit, code uses 12-bit | WARNING |
 | Weak commitment | Hash function is not collision-resistant | CRITICAL |
@@ -119,29 +135,24 @@ After the soundness audit, analyze fixed-point precision gaps and circuit costs.
 
 **D1. Precision Gap Analysis**
 
-Run the precision checker:
+Using the paper manifest's quantization information and the code manifest's
+precision config, reason about precision gaps directly:
 
-```bash
-python .github/skills/analyze-zkml-gap/scripts/precision_checker.py "<paper_manifest.json>" "<code_manifest.json>"
-```
-
-Review the output and supplement with your own reasoning:
 - For each operator, is the code's precision sufficient for the paper's claims?
 - Does the accumulation bit-width account for inner dimensions?
 - Are approximation errors within the precision budget?
+- Reference the gate_cost_table.md and approximation_db.md for known precision
+  requirements — but apply your own expert judgment for novel constructs.
 
 **D2. Gate Cost Profiling**
 
-Run the gate cost profiler:
+Using the code manifest's operator list and the gate_cost_table.md reference,
+estimate circuit costs directly:
 
-```bash
-python .github/skills/analyze-zkml-gap/scripts/gate_cost_profiler.py "<code_manifest.json>"
-```
-
-Review and supplement:
 - Which operators dominate the circuit cost?
 - Are Transformer Killers using exact implementations that could be optimized?
 - What is the estimated total gate count and proving time?
+- Base gate cost estimates on the gate_cost_table.md reference — don't invent numbers
 
 **D3. Optimization Recommendations**
 

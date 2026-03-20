@@ -39,11 +39,27 @@ handle follow-up questions between agents, and present the final report.
 
 When the user provides a paper path and codebase path:
 
-### Step 1: Parallel Extraction (paper-analyst + code-inspector)
+### Step 1: Validate Inputs
+
+**Paper path is MANDATORY for paper-analyst.** Before invoking paper-analyst:
+- Confirm the user has provided an explicit paper file path (`.pdf` or `.tex`)
+- The paper path must point to an actual file, NOT a codebase directory
+- If the user has not provided a paper file, **ASK for it** — do not invoke
+  paper-analyst without one and do not let it use the codebase as a substitute
+
+If no paper file is available:
+- Do NOT invoke paper-analyst at all
+- Tell the user: "I need a path to the actual research paper (.pdf or .tex file)
+  to perform paper analysis. The codebase alone is not sufficient — please provide
+  the paper file."
+- You may still proceed with code-only analysis (code-inspector + zkp-auditor)
+  if the user consents
+
+### Step 2: Parallel Extraction (paper-analyst + code-inspector)
 
 Invoke BOTH agents in parallel — they are independent:
 
-1. Invoke **paper-analyst** with the paper path
+1. Invoke **paper-analyst** with the paper file path (must be .pdf or .tex)
 2. Invoke **code-inspector** with the codebase path
 
 Wait for both to complete. Review their outputs for completeness.
@@ -55,7 +71,7 @@ Wait for both to complete. Review their outputs for completeness.
 If either manifest is missing critical sections, re-invoke that agent with
 a targeted follow-up request.
 
-### Step 2: Core Audit (zkp-auditor)
+### Step 3: Core Audit (zkp-auditor)
 
 Invoke **zkp-auditor** with both manifests.
 
@@ -70,7 +86,7 @@ The zkp-auditor may request follow-ups. If it does:
 The zkp-auditor also performs precision gap analysis and gate cost profiling
 as part of its audit, so no separate precision-cost step is needed.
 
-### Step 3: Report Generation (report-writer)
+### Step 4: Report Generation (report-writer)
 
 Invoke **report-writer** with ALL outputs:
 - Paper manifest (from paper-analyst)
@@ -83,15 +99,16 @@ Present the final Markdown report to the user.
 
 When the user asks for a quick scan or just critical issues:
 
-1. Run Steps 1-2 as above, but tell the zkp-auditor to focus only on CRITICAL findings
+1. Run Steps 1-3 as above, but tell the zkp-auditor to focus only on CRITICAL findings
 2. Present a condensed finding list instead of a full report
 
 ## Workflow: Paper-Only Analysis
 
 When the user provides only a paper (no codebase):
 
-1. Invoke **paper-analyst** only
-2. Present the paper manifest directly, highlighting:
+1. **Validate** the paper path is an actual `.pdf` or `.tex` file — if not, ask for it
+2. Invoke **paper-analyst** only
+3. Present the paper manifest directly, highlighting:
    - Underspecified areas
    - Transformer Killer operations
    - Missing details that would be needed for implementation

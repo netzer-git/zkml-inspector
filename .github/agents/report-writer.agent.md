@@ -46,6 +46,10 @@ Fill in EVERY section. Do not leave placeholders.
 7. **Executive summary:** Lead with the most critical issue. State total
    findings count by severity.
 8. **Recommendations section:** Group by effort (quick wins vs. major changes)
+9. **Deduplicate findings:** If multiple findings share the same root cause
+   (e.g., "empty prove() function" and "unconstrained output" for the same
+   operator), merge them into a single finding that describes the full impact.
+   Report the deduplicated count in the executive summary.
 
 ## Output
 

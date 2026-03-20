@@ -35,14 +35,17 @@ the soundness and zero-knowledge properties claimed in the paper.
 
 ## 2. Intermediate Value Constraints
 
-### ✅ CHECK-2.1: All intermediate activations are constrained
+### ✅ CHECK-2.1: All intermediate activations are correctly constrained
 - **What**: Every layer's output must be constrained to equal the correct computation
-  of that layer's function applied to its input
-- **Why**: Without constraints, the prover can skip layers or substitute arbitrary
-  intermediate values
+  of that layer's function applied to its input. The constraint must be
+  **mathematically equivalent** to the intended operation — not just present.
+- **Why**: A present-but-wrong constraint is as dangerous as a missing one.
+  If the constraint polynomial admits solutions where $y \neq f(x, w)$,
+  the prover can substitute incorrect values.
 - **Severity**: CRITICAL
-- **How to verify**: For each layer in the model, find the constraint that enforces
-  `output = f(input, weights)`
+- **How to verify**: For each layer, find the constraint and apply the first-principles
+  derivation (zkp_foundations.md): extract the constraint polynomial, verify
+  $p = 0 \iff y = f(x, w)$, check for missing terms or free variables
 
 ### ✅ CHECK-2.2: No unconstrained wires between layers
 - **What**: The output wire of layer N must be the same wire as the input to layer N+1
@@ -57,6 +60,19 @@ the soundness and zero-knowledge properties claimed in the paper.
 - **Why**: If the output is private, the prover can claim any result
 - **Severity**: CRITICAL
 - **How to verify**: Check that the last layer's output is assigned to an instance column
+
+### ✅ CHECK-2.4: Novel constructs are analyzed from first principles
+- **What**: For any operation not in the standard operator catalog (custom activations,
+  novel commitment schemes, new folding techniques, etc.), derive the required
+  constraints from the mathematical definition using the first-principles
+  procedure in zkp_foundations.md
+- **Why**: Every new paper can introduce constructs with unique failure modes.
+  A checklist cannot anticipate them — only principled derivation can.
+- **Severity**: CRITICAL
+- **How to verify**: Identify all operations not matching a known catalog entry.
+  For each: decompose into field-representable parts, derive constraint polynomials,
+  verify sufficiency (correct output forced) and necessity (wrong output rejected),
+  check all auxiliary variables are constrained
 
 ---
 
