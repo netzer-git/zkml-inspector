@@ -23,6 +23,5 @@ Perform a rapid scan focusing only on CRITICAL issues using the sub-agent pipeli
    - Unconstrained wires between layers (layer-skip attack)
    - Non-deterministic operations still present
    - Final output not exposed as public value
-3. Skip precision-cost analysis
-4. Output a concise finding list: each CRITICAL finding with file, line, and one-sentence recommendation
-5. End with a total count: "X critical issues found"
+3. Output a concise finding list: each CRITICAL finding with file, line, and one-sentence recommendation
+4. End with a total count: "X critical issues found"

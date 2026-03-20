@@ -19,8 +19,7 @@ actionable Markdown report.
 You receive JSON outputs from:
 1. **paper-analyst**: Paper manifest (operators, claims, threat model)
 2. **code-inspector**: Code manifest (framework, operators, constraints)
-3. **zkp-auditor**: Audit findings (soundness issues, lifecycle gaps)
-4. **precision-cost-analyst**: Precision gaps and gate cost profile
+3. **zkp-auditor**: Audit findings (soundness issues, lifecycle gaps, precision gaps, gate cost profile)
 
 ## Report Template
 

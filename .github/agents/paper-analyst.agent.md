@@ -33,7 +33,7 @@ has gaps — and those gaps are findings.
 ## Your Task
 
 Given a paper path, produce a **Paper Manifest** — a structured JSON document
-that the downstream agents (zkp-auditor, precision-cost-analyst) will consume.
+that the downstream agent (zkp-auditor) will consume.
 
 ## Execution
 

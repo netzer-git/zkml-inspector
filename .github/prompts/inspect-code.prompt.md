@@ -21,4 +21,4 @@ Analyze a zkML codebase to understand its structure, framework, operators, and Z
    - Operators found with implementation types
    - Precision configuration
    - Any non-deterministic operations or unclear areas
-3. Optionally dispatch precision-cost for gate cost estimation if user wants performance data
+3. Optionally dispatch zkp-auditor for gate cost estimation if user wants performance data

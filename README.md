@@ -79,14 +79,13 @@ Or use the prompt shortcut:
 
 ## Architecture
 
-The system uses an **orchestrator + 5 sub-agents** pattern:
+The system uses an **orchestrator + 4 sub-agents** pattern:
 
 ```
 zkml-inspector (orchestrator)
   ├── paper-analyst     — Extracts claims from research papers with ZKP understanding
   ├── code-inspector    — Maps codebase to the commit/prove/verify lifecycle
-  ├── zkp-auditor       — Core soundness reasoning, can ask follow-ups to agents 1 & 2
-  ├── precision-cost    — Fixed-point precision gaps and gate cost estimation
+  ├── zkp-auditor       — Core soundness reasoning, precision & cost analysis, can ask follow-ups to agents 1 & 2
   └── report-writer     — Assembles all findings into final Markdown report
 ```
 
@@ -97,9 +96,8 @@ All analysis agents share a common ZKP knowledge foundation
 
 ```
 1. paper-analyst + code-inspector  (parallel — independent extraction)
-2. zkp-auditor                     (cross-references both, can ask follow-ups)
-3. precision-cost                  (gate costs and precision analysis)
-4. report-writer                   (assembles final Markdown report)
+2. zkp-auditor                     (cross-references both, can ask follow-ups, runs precision & cost analysis)
+3. report-writer                   (assembles final Markdown report)
 ```
 
 ### File Structure
@@ -110,8 +108,7 @@ All analysis agents share a common ZKP knowledge foundation
 │   ├── zkml-inspector.agent.md   # Orchestrator
 │   ├── paper-analyst.agent.md    # Paper extraction sub-agent
 │   ├── code-inspector.agent.md   # Code inspection sub-agent
-│   ├── zkp-auditor.agent.md      # Soundness auditor sub-agent
-│   ├── precision-cost.agent.md   # Precision & cost sub-agent
+│   ├── zkp-auditor.agent.md      # Soundness auditor + precision/cost sub-agent
 │   └── report-writer.agent.md    # Report generation sub-agent
 ├── prompts/
 │   ├── analyze-full.prompt.md    # Full paper vs. code analysis

@@ -18,8 +18,7 @@ Perform a comprehensive analysis comparing the research paper against the implem
 1. Confirm the paper path and codebase path with the user
 2. Run the full orchestrator pipeline, dispatching agents in order:
    - **paper-analyst + code-inspector** (parallel): Extract structured data from both
-   - **zkp-auditor**: Core soundness analysis with follow-up questions to agents 1 & 2
-   - **precision-cost**: Fixed-point precision and gate cost analysis
+   - **zkp-auditor**: Core soundness analysis with follow-up questions to agents 1 & 2, plus precision & gate cost analysis
    - **report-writer**: Assemble the final Markdown report
 
 3. The report must cover ALL of these sections:

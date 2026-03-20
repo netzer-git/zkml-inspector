@@ -6,7 +6,7 @@ description: >-
   auditing zkML circuit soundness, finding proof-system vulnerabilities,
   or checking constraint completeness. Triggers: "audit soundness",
   "check constraints", "zkp security", "soundness analysis", "proof audit".
-tools: [read, search, agent]
+tools: [execute, read, search, agent]
 user-invocable: false
 agents: [paper-analyst, code-inspector]
 ---
@@ -33,6 +33,13 @@ Also load the soundness checklist:
 
 ```
 .github/skills/analyze-zkml-gap/references/soundness_checklist.md
+```
+
+For precision and gate cost analysis, also load:
+
+```
+.github/skills/analyze-zkml-gap/references/gate_cost_table.md
+.github/skills/analyze-zkml-gap/references/approximation_db.md
 ```
 
 ## Your Inputs
@@ -105,6 +112,45 @@ For each pair, reason:
 - If the paper is vague AND the code is unclear → `WARNING` (nobody is sure what's supposed to happen)
 - If the paper is vague but the code is clear → `INFO` (code made a reasonable choice)
 - If the paper is clear but the code is unclear → `WARNING` (code might be wrong)
+
+### Phase D: Precision & Gate Cost Analysis
+
+After the soundness audit, analyze fixed-point precision gaps and circuit costs.
+
+**D1. Precision Gap Analysis**
+
+Run the precision checker:
+
+```bash
+python .github/skills/analyze-zkml-gap/scripts/precision_checker.py "<paper_manifest.json>" "<code_manifest.json>"
+```
+
+Review the output and supplement with your own reasoning:
+- For each operator, is the code's precision sufficient for the paper's claims?
+- Does the accumulation bit-width account for inner dimensions?
+- Are approximation errors within the precision budget?
+
+**D2. Gate Cost Profiling**
+
+Run the gate cost profiler:
+
+```bash
+python .github/skills/analyze-zkml-gap/scripts/gate_cost_profiler.py "<code_manifest.json>"
+```
+
+Review and supplement:
+- Which operators dominate the circuit cost?
+- Are Transformer Killers using exact implementations that could be optimized?
+- What is the estimated total gate count and proving time?
+
+**D3. Optimization Recommendations**
+
+For each bottleneck, propose concrete optimizations:
+- Exact → lookup table: how much would it save?
+- Exact → approximation: what error would it introduce?
+- Can operations be folded (e.g., BatchNorm into Linear)?
+- Base gate cost estimates on the gate_cost_table.md reference — don't invent numbers
+- Always state whether an optimization introduces error and quantify it
 
 ## When to Ask Follow-Up Questions
 
@@ -181,6 +227,43 @@ Return a structured findings document:
     "CHECK-1.1": { "status": "FAIL", "finding_id": "LC-1" },
     "CHECK-1.2": { "status": "PASS" },
     "...": "..."
+  },
+  "precision_analysis": {
+    "precision_gaps": [
+      {
+        "operator": "Softmax",
+        "severity": "CRITICAL",
+        "paper_precision": "16-bit",
+        "code_precision": "12-bit",
+        "gap_bits": 4,
+        "impact": "exp() overflow likely for inputs > 5.0",
+        "recommendation": "Increase to 16-bit or use range reduction"
+      }
+    ],
+    "gate_cost_profile": {
+      "operators": [
+        {
+          "name": "Attention",
+          "implementation": "composite (exact softmax)",
+          "estimated_gates": 200000,
+          "percentage_of_total": 65.3,
+          "is_transformer_killer": true
+        }
+      ],
+      "total_estimated_gates": 306400,
+      "proof_system_multiplier": "1.0x (Halo2/Plonk)",
+      "estimated_proving_time": "~2s on GPU"
+    },
+    "top_bottlenecks": [
+      {
+        "operator": "Softmax",
+        "current_cost": 100000,
+        "optimized_cost": 1500,
+        "savings": "98.5%",
+        "optimization": "Switch to lookup-table based exp() with 256 entries",
+        "tradeoff": "Introduces quantization error ≤ 0.005"
+      }
+    ]
   },
   "follow_up_questions_asked": [
     {

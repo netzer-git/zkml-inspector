@@ -6,14 +6,13 @@ zkml-inspector analyzes gaps between zkML (zero-knowledge machine learning) rese
 
 ## Architecture: Agent Dispatch Model
 
-The system uses an **orchestrator + 5 sub-agents** pattern:
+The system uses an **orchestrator + 4 sub-agents** pattern:
 
 ```
 zkml-inspector (orchestrator)
   ├── paper-analyst     — Extracts claims from research papers with ZKP understanding
   ├── code-inspector    — Maps codebase to the commit/prove/verify lifecycle
-  ├── zkp-auditor       — Core soundness reasoning, can ask follow-ups to agents 1 & 2
-  ├── precision-cost    — Fixed-point precision gaps and gate cost estimation
+  ├── zkp-auditor       — Core soundness reasoning, precision & cost analysis, can ask follow-ups to agents 1 & 2
   └── report-writer     — Assembles all findings into final Markdown report
 ```
 
@@ -25,6 +24,7 @@ common ZKP knowledge foundation: `.github/skills/analyze-zkml-gap/references/zkp
 - paper-analyst is accountable for extracting ZKP-relevant claims, not just operators
 - code-inspector is accountable for mapping code to ZKP lifecycle phases
 - zkp-auditor can request follow-ups from paper-analyst and code-inspector
+- zkp-auditor also handles precision gap analysis and gate cost profiling
 - Each agent is independently invocable for standalone tasks
 
 ## Language & Runtime
@@ -79,8 +79,7 @@ python -m pytest tests/
 - `.github/agents/zkml-inspector.agent.md` — Orchestrator agent
 - `.github/agents/paper-analyst.agent.md` — Paper extraction sub-agent
 - `.github/agents/code-inspector.agent.md` — Code inspection sub-agent
-- `.github/agents/zkp-auditor.agent.md` — Soundness auditor sub-agent
-- `.github/agents/precision-cost.agent.md` — Precision & cost sub-agent
+- `.github/agents/zkp-auditor.agent.md` — Soundness auditor + precision/cost sub-agent
 - `.github/agents/report-writer.agent.md` — Report generation sub-agent
 
 ## Prompt Files
@@ -102,8 +101,8 @@ python -m pytest tests/
 
 - `.github/skills/analyze-zkml-gap/scripts/parse_paper.py` — LaTeX/PDF parser (used by paper-analyst)
 - `.github/skills/analyze-zkml-gap/scripts/inspect_codebase.py` — Code scanner (used by code-inspector)
-- `.github/skills/analyze-zkml-gap/scripts/precision_checker.py` — Precision gap checker (used by precision-cost)
-- `.github/skills/analyze-zkml-gap/scripts/gate_cost_profiler.py` — Gate cost estimator (used by precision-cost)
+- `.github/skills/analyze-zkml-gap/scripts/precision_checker.py` — Precision gap checker (used by zkp-auditor)
+- `.github/skills/analyze-zkml-gap/scripts/gate_cost_profiler.py` — Gate cost estimator (used by zkp-auditor)
 
 ## Supported Inputs
 

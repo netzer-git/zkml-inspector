@@ -16,7 +16,6 @@ agents:
   - paper-analyst
   - code-inspector
   - zkp-auditor
-  - precision-cost
   - report-writer
 argument-hint: "Describe the paper and codebase to analyze, e.g., 'Analyze paper.pdf against ./my-zkml-project/'"
 ---
@@ -33,8 +32,7 @@ handle follow-up questions between agents, and present the final report.
 |-------|------|-------|--------|
 | **paper-analyst** | Extract claims from research paper | Paper path | Paper manifest JSON |
 | **code-inspector** | Map codebase to ZKP lifecycle | Codebase path | Code manifest JSON |
-| **zkp-auditor** | Reason about soundness gaps | Both manifests | Audit findings JSON |
-| **precision-cost** | Analyze precision & gate costs | Both manifests | Cost profile JSON |
+| **zkp-auditor** | Reason about soundness gaps, precision & gate costs | Both manifests | Audit findings JSON (includes cost profile) |
 | **report-writer** | Assemble final report | All findings | Markdown report |
 
 ## Workflow: Full Analysis
@@ -69,20 +67,15 @@ The zkp-auditor may request follow-ups. If it does:
 
 **Maximum follow-up rounds: 2.** After 2 rounds, proceed with available data.
 
-### Step 3: Precision & Cost Analysis (precision-cost)
+The zkp-auditor also performs precision gap analysis and gate cost profiling
+as part of its audit, so no separate precision-cost step is needed.
 
-Invoke **precision-cost** with both manifests.
-
-This runs after the zkp-auditor because the auditor may have corrected
-the manifests through follow-ups.
-
-### Step 4: Report Generation (report-writer)
+### Step 3: Report Generation (report-writer)
 
 Invoke **report-writer** with ALL outputs:
 - Paper manifest (from paper-analyst)
 - Code manifest (from code-inspector)
-- Audit findings (from zkp-auditor)
-- Cost profile (from precision-cost)
+- Audit findings including cost profile (from zkp-auditor)
 
 Present the final Markdown report to the user.
 
@@ -91,8 +84,7 @@ Present the final Markdown report to the user.
 When the user asks for a quick scan or just critical issues:
 
 1. Run Steps 1-2 as above, but tell the zkp-auditor to focus only on CRITICAL findings
-2. Skip Step 3 (precision-cost)
-3. Present a condensed finding list instead of a full report
+2. Present a condensed finding list instead of a full report
 
 ## Workflow: Paper-Only Analysis
 

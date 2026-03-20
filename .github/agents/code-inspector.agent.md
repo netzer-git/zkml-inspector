@@ -32,7 +32,7 @@ those gaps are findings.
 ## Your Task
 
 Given a codebase path, produce a **Code Manifest** — a structured JSON document
-that the downstream agents (zkp-auditor, precision-cost-analyst) will consume.
+that the downstream agent (zkp-auditor) will consume.
 
 ## Execution
 

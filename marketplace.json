@@ -38,10 +38,6 @@
       "path": ".github/agents/zkp-auditor.agent.md"
     },
     {
-      "name": "precision-cost",
-      "path": ".github/agents/precision-cost.agent.md"
-    },
-    {
       "name": "report-writer",
       "path": ".github/agents/report-writer.agent.md"
     }
