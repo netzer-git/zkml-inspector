@@ -75,13 +75,27 @@ a targeted follow-up request.
 
 Invoke **zkp-auditor** with both manifests.
 
-The zkp-auditor may request follow-ups. If it does:
-- Parse its follow-up questions
-- Re-invoke the appropriate sub-agent (paper-analyst or code-inspector) with
-  the specific question
-- Feed the answer back to the zkp-auditor
+#### Follow-Up Round (MANDATORY when follow-ups are present)
+
+After the zkp-auditor returns its findings, check its output for a
+`follow_up_questions` array. If the array is non-empty, you MUST process it:
+
+1. Group the questions by target agent (`paper-analyst` or `code-inspector`).
+2. For each group, re-invoke that sub-agent with the questions as a focused
+   re-analysis request. Include the specific files, line ranges, or sections
+   the auditor asked about.
+3. Collect the answers and re-invoke **zkp-auditor** a second time, providing:
+   - The original manifests
+   - The original audit findings
+   - The follow-up answers (as a `follow_up_answers` array)
+   - The instruction: "Refine your audit findings using the follow-up answers.
+     Update severity, add new findings, or close false positives as appropriate.
+     Do NOT repeat findings that are unchanged."
+4. Merge the refined findings with the originals (preferring the refined version
+   for any finding whose `id` matches).
 
 **Maximum follow-up rounds: 2.** After 2 rounds, proceed with available data.
+If the auditor returns no `follow_up_questions`, proceed immediately.
 
 The zkp-auditor also performs precision gap analysis and gate cost profiling
 as part of its audit, so no separate precision-cost step is needed.
@@ -92,8 +106,23 @@ Invoke **report-writer** with ALL outputs:
 - Paper manifest (from paper-analyst)
 - Code manifest (from code-inspector)
 - Audit findings including cost profile (from zkp-auditor)
+- An `output_path` for the report file (see below)
 
-Present the final Markdown report to the user.
+#### Report File Output (MANDATORY)
+
+The report MUST be saved to disk as a Markdown file. Determine the output path:
+
+1. If the user specified an output path, use that.
+2. Otherwise, derive a filename from the paper title or codebase name:
+   - Sanitize the name: lowercase, replace spaces with hyphens, strip special chars
+   - Pattern: `examples/{name}_report.md`
+   - Example: `examples/zkllm_report.md`
+3. Include the `output_path` in the prompt to report-writer.
+
+After report-writer returns the Markdown content:
+1. **Write the report to disk** at the determined path using the file creation tool.
+2. **Present the report** to the user in chat.
+3. **Confirm the file location**: tell the user where the report was saved.
 
 ## Workflow: Quick Scan
 

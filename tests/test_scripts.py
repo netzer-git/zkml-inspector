@@ -253,6 +253,19 @@ class TestAgentContent:
         assert '"audit_summary"' in text
         assert '"soundness_checklist"' in text
 
+    def test_zkp_auditor_has_follow_up_format(self) -> None:
+        """zkp-auditor must define the follow_up_questions output format."""
+        text = (AGENTS_DIR / "zkp-auditor.agent.md").read_text(encoding="utf-8")
+        assert '"follow_up_questions"' in text
+        assert '"target_agent"' in text
+        assert '"related_finding_id"' in text
+
+    def test_zkp_auditor_follow_up_section(self) -> None:
+        """zkp-auditor must have a Follow-Up Questions section."""
+        text = (AGENTS_DIR / "zkp-auditor.agent.md").read_text(encoding="utf-8")
+        assert "## Follow-Up Questions" in text
+        assert "follow_up_answers" in text
+
     def test_zkp_auditor_references_gate_cost_table(self) -> None:
         text = (AGENTS_DIR / "zkp-auditor.agent.md").read_text(encoding="utf-8")
         assert "gate_cost_table.md" in text
@@ -266,6 +279,27 @@ class TestAgentContent:
         assert "eduplicate" in text.lower(), (
             "report-writer should have a finding deduplication rule"
         )
+
+    def test_report_writer_has_file_output_instructions(self) -> None:
+        """report-writer must document how the report file is saved."""
+        text = (AGENTS_DIR / "report-writer.agent.md").read_text(encoding="utf-8")
+        assert "output_path" in text, (
+            "report-writer should reference output_path for file saving"
+        )
+
+    def test_orchestrator_has_report_file_output(self) -> None:
+        """Orchestrator must instruct saving the report to disk."""
+        text = (AGENTS_DIR / "zkml-inspector.agent.md").read_text(encoding="utf-8")
+        assert "Write the report to disk" in text, (
+            "Orchestrator should instruct writing the report to a file"
+        )
+
+    def test_orchestrator_has_follow_up_round(self) -> None:
+        """Orchestrator must document the follow-up round workflow."""
+        text = (AGENTS_DIR / "zkml-inspector.agent.md").read_text(encoding="utf-8")
+        assert "Follow-Up Round" in text
+        assert "follow_up_questions" in text
+        assert "follow_up_answers" in text
 
     def test_all_agents_reference_zkp_foundations(self) -> None:
         """All analysis agents should reference the shared ZKP foundations."""

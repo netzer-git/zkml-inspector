@@ -99,6 +99,37 @@ For each layer/operator:
 - Are there any assignments without constraints (CRITICAL)?
 - Are there conditional branches? If so, are both branches constrained?
 
+**E. Protocol Transcript Integrity (Commit-Before-Challenge Ordering)**
+
+For each `prove()` function or interactive sub-protocol in the codebase:
+
+1. **Identify all prover-computed values** — auxiliary vectors, multiplicity
+   counts, intermediate polynomial evaluations, accumulator values, quotient
+   polynomials, etc. These are any values the prover computes and later uses
+   in a verification equation or sumcheck.
+2. **Identify all verifier challenges** — random field elements (α, β, r,
+   challenge vectors, etc.). In Fiat-Shamir mode, these are derived from a
+   transcript hash. In interactive mode, these come from `random_vec()` or
+   similar calls.
+3. **Trace the ordering** — for each (prover-value, challenge) pair that
+   appears together in a verification equation:
+   - Is the prover value committed (via a commitment scheme) or hashed into
+     a Fiat-Shamir transcript BEFORE the challenge is generated/used?
+   - Or is the prover value simply passed as a function argument alongside
+     the challenge with no commitment step in between?
+4. **Flag violations** — any prover-computed value that is used with a
+   challenge without prior commitment is a `CRITICAL` finding. Report:
+   - The prover value (what it is, where computed)
+   - The challenge (what it is, where generated)
+   - The verification equation they appear in
+   - Why commitment ordering matters for this specific case
+5. **Check opening proofs** — for each commitment, verify there is a
+   corresponding opening proof that the verifier checks. A commitment
+   that is never opened and verified is useless.
+
+Add these findings to the `protocol_transcript` field of your output JSON.
+This field should contain one entry per `prove()` function analyzed.
+
 ### Step 2: Extract precision configuration
 
 Beyond what the inspector finds, manually search for:
@@ -194,6 +225,26 @@ Return a JSON document on stdout:
       "line": 42,
       "severity": "CRITICAL",
       "notes": "Dropout still present in forward pass"
+    }
+  ],
+  "protocol_transcript": [
+    {
+      "prove_function": "tLookup::prove()",
+      "file": "src/tlookup.rs",
+      "line": 140,
+      "prover_values": [
+        {
+          "name": "multiplicity vector m",
+          "computed_at": "src/tlookup.rs:120",
+          "committed_before_challenge": false,
+          "challenge_used_with": "beta (line 145)",
+          "severity": "CRITICAL",
+          "notes": "m is used in verification equation with beta but never committed"
+        }
+      ],
+      "challenges": ["alpha (line 142)", "beta (line 145)"],
+      "opening_proofs_verified": true,
+      "notes": "..."
     }
   ],
   "unclear_areas": [

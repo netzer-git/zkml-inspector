@@ -134,9 +134,74 @@ the soundness and zero-knowledge properties claimed in the paper.
 
 ---
 
-## 5. Approximation Soundness
+## 5. Protocol Transcript Integrity (Commit-Before-Challenge)
 
-### ✅ CHECK-5.1: Approximation error is bounded and documented
+In any multi-round interactive proof (or Fiat-Shamir non-interactive proof),
+every prover-computed value that participates in a verification equation must
+be **committed before** the verifier challenge it is used with. If not, the
+prover can see the challenge first and adaptively pick the value to cheat.
+
+This applies generally to ALL proof sub-protocols — sumcheck, lookup arguments,
+inner-product arguments, polynomial commitments, folding, and any custom
+interactive protocol a paper defines. See `zkp_foundations.md` §Protocol
+Transcript Integrity for the full reasoning framework.
+
+### ✅ CHECK-5A.1: All prover auxiliary values are committed before challenges
+- **What**: For each interactive sub-protocol (sumcheck round, lookup argument,
+  IPA step, etc.), every auxiliary value computed by the prover must be committed
+  (or irrevocably sent) BEFORE the verifier challenge it accompanies
+- **Why**: Without this ordering, the prover can see the challenge and choose a
+  value that satisfies the verification equation for an incorrect computation.
+  This breaks soundness of the sub-protocol entirely.
+- **Severity**: CRITICAL
+- **How to verify**: For each `prove()` function in the code, trace the flow:
+  (1) identify prover-computed values (auxiliary vectors, multiplicity counts,
+  intermediate polynomial evaluations, etc.),
+  (2) identify verifier challenges (random field elements α, β, r, etc.),
+  (3) verify the prover value is committed or hashed into a transcript BEFORE
+  the challenge is generated or used.
+  Flag any prover value that appears alongside a challenge without prior commitment.
+
+### ✅ CHECK-5A.2: Commitment openings are verified at evaluation points
+- **What**: When a committed value is later evaluated at a random point (e.g.,
+  polynomial commitment opened at a challenge point), the opening proof must
+  be checked — the verifier must confirm the opened value matches the commitment
+- **Why**: Without verifying the opening, the prover can commit to one value
+  and open to a different one. The commitment is useless if never opened and
+  verified.
+- **Severity**: CRITICAL
+- **How to verify**: For each commitment made in the protocol, trace whether
+  there is a corresponding `open()` / `verify_opening()` call where the opened
+  value is checked against the commitment using the evaluation challenge
+
+### ✅ CHECK-5A.3: Fiat-Shamir transcript includes all prover messages
+- **What**: In a non-interactive (Fiat-Shamir) protocol, every prover message
+  must be hashed into the transcript hash BEFORE deriving the next challenge.
+  No prover message may be omitted from the transcript.
+- **Why**: Omitting a prover message from the transcript means the challenge
+  doesn't depend on it — the prover can change that message after seeing
+  the challenge without affecting the challenge value
+- **Severity**: CRITICAL
+- **How to verify**: Trace the Fiat-Shamir transcript construction. For each
+  round: (1) what values does the prover add to the transcript?
+  (2) what challenge is derived from the transcript after that?
+  (3) are there any prover-computed values used in subsequent verification
+  that were NOT added to the transcript?
+
+### ✅ CHECK-5A.4: No challenge reuse across independent sub-protocols
+- **What**: Each independent sub-protocol invocation should use fresh challenges,
+  either from separate Fiat-Shamir domain separators or independent verifier randomness
+- **Why**: Reusing the same challenge across two sub-protocols allows the prover to
+  correlate responses and exploit cross-protocol cancellation
+- **Severity**: WARNING
+- **How to verify**: Check that each sub-protocol call uses distinct random
+  challenges. In Fiat-Shamir mode, verify domain separation tags are used.
+
+---
+
+## 6. Approximation Soundness
+
+### ✅ CHECK-6.1: Approximation error is bounded and documented
 - **What**: For each approximated operation (Softmax, Sigmoid, etc.), the maximum
   approximation error must be stated and justified
 - **Why**: Unbounded error means the proof guarantees nothing about accuracy
@@ -144,14 +209,14 @@ the soundness and zero-knowledge properties claimed in the paper.
 - **How to verify**: For each approximation, find the error bound; verify it's provably
   correct (not just empirically measured)
 
-### ✅ CHECK-5.2: Approximation matches paper's specification
+### ✅ CHECK-6.2: Approximation matches paper's specification
 - **What**: If the paper specifies a particular approximation (e.g., degree-7 Taylor),
   the code must implement exactly that
 - **Why**: A different approximation may have different error characteristics
 - **Severity**: WARNING
 - **How to verify**: Compare paper's approximation formula with code implementation
 
-### ✅ CHECK-5.3: Approximation input range matches actual input distribution
+### ✅ CHECK-6.3: Approximation input range matches actual input distribution
 - **What**: The approximation's valid input range must cover all values the model
   can produce in practice
 - **Why**: Outside the valid range, the approximation error is unbounded
@@ -161,16 +226,16 @@ the soundness and zero-knowledge properties claimed in the paper.
 
 ---
 
-## 6. Quantization Consistency
+## 7. Quantization Consistency
 
-### ✅ CHECK-6.1: Quantization scheme matches between paper and code
+### ✅ CHECK-7.1: Quantization scheme matches between paper and code
 - **What**: The paper's quantization method (uniform, per-channel, symmetric/asymmetric)
   must match the implementation
 - **Why**: Different quantization schemes have different error profiles
 - **Severity**: WARNING
 - **How to verify**: Compare paper's Section on quantization with code's quantization logic
 
-### ✅ CHECK-6.2: Scale factors are committed or deterministic
+### ✅ CHECK-7.2: Scale factors are committed or deterministic
 - **What**: Quantization scale factors must be either committed (if dynamic) or
   deterministic (if static/calibrated)
 - **Why**: If the prover can choose scale factors, they can distort the computation
@@ -178,7 +243,7 @@ the soundness and zero-knowledge properties claimed in the paper.
 - **How to verify**: Check whether scale factors are instance values or computed
   deterministically from committed weights
 
-### ✅ CHECK-6.3: Quantization error is bounded end-to-end
+### ✅ CHECK-7.3: Quantization error is bounded end-to-end
 - **What**: The accumulated quantization error across all layers must be bounded
 - **Why**: Per-layer error bounds don't guarantee end-to-end accuracy
 - **Severity**: WARNING
@@ -187,16 +252,16 @@ the soundness and zero-knowledge properties claimed in the paper.
 
 ---
 
-## 7. Zero-Knowledge Property
+## 8. Zero-Knowledge Property
 
-### ✅ CHECK-7.1: Private inputs are not leaked via public outputs
+### ✅ CHECK-8.1: Private inputs are not leaked via public outputs
 - **What**: The circuit's public output should not allow reconstruction of private inputs
 - **Why**: This is the fundamental ZK property — violated if output leaks too much information
 - **Severity**: CRITICAL
 - **How to verify**: Analyze the circuit's input-output relationship; check if the output
   is a one-way function of the input
 
-### ✅ CHECK-7.2: No auxiliary information leakage
+### ✅ CHECK-8.2: No auxiliary information leakage
 - **What**: Proof transcripts, verifier queries, and circuit structure should not reveal
   private witness values
 - **Why**: Side-channel leakage breaks zero-knowledge even if the circuit is correct
@@ -204,7 +269,7 @@ the soundness and zero-knowledge properties claimed in the paper.
 - **How to verify**: Check if the proof system used (Groth16, Plonk, etc.) provides
   computational or statistical ZK; verify no additional information is published
 
-### ✅ CHECK-7.3: Model architecture is treated correctly (public vs private)
+### ✅ CHECK-8.3: Model architecture is treated correctly (public vs private)
 - **What**: Decide whether the model architecture itself is public or private, and
   handle accordingly
 - **Why**: If architecture is meant to be private, the circuit structure shouldn't reveal it

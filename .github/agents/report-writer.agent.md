@@ -53,8 +53,17 @@ Fill in EVERY section. Do not leave placeholders.
 
 ## Output
 
-A complete Markdown report written to stdout. The orchestrator agent
-will present this to the user.
+A complete Markdown report. The orchestrator will save this to disk.
+
+### File Output
+
+The orchestrator provides an `output_path` in your prompt (e.g.,
+`examples/zkllm_report.md`). Include this path in your response metadata
+so the orchestrator knows where to write the file.
+
+Your output should be ONLY the Markdown report content — no wrapper, no
+code fences around the entire report, no preamble. The orchestrator will
+write it directly to the file and also present it in chat.
 
 ## Constraints on Your Behavior
 

@@ -110,6 +110,27 @@ For EVERY mathematical operation:
 **F. Soundness & Completeness Claims**
 - What theorems/proofs are stated? Any limitations acknowledged?
 
+**G. Protocol Round Structure (for EACH interactive sub-protocol)**
+
+For every sub-protocol the paper describes (sumcheck, lookup argument, IPA,
+polynomial commitment opening, folding step, custom protocols, etc.):
+
+1. **List each round** in order: what does the prover send? What does the
+   verifier send?
+2. **Identify prover commitment steps**: which prover messages must be
+   committed (or irrevocably sent) BEFORE the verifier issues a challenge?
+3. **Flag any prover value that the paper says should be committed** in a
+   given round — these are critical for soundness. The code-inspector and
+   zkp-auditor need this to verify the code commits them.
+4. If the paper describes a Fiat-Shamir transformation, note which values
+   are hashed into the transcript in which order.
+5. If the protocol is custom (not a standard sumcheck/lookup), apply the
+   commit-before-challenge principle from zkp_foundations.md §Protocol
+   Transcript Integrity to determine which values MUST be committed even
+   if the paper doesn't state it explicitly.
+
+Include this in the `protocol_rounds` field of the manifest.
+
 ### Step 2: Cross-reference and derive
 
 Load the operator catalog and approximation database:
@@ -186,6 +207,22 @@ Return a JSON document on stdout with this structure:
     "evidence": "Section 5 states..."
   },
   "soundness_claims": [...],
+  "protocol_rounds": [
+    {
+      "sub_protocol": "e.g., tLookup, sumcheck, IPA, custom protocol name",
+      "location": "Section X, Protocol Y",
+      "rounds": [
+        {
+          "round": 1,
+          "prover_sends": ["description of value(s) sent"],
+          "prover_must_commit": ["which values must be committed in this round"],
+          "verifier_sends": ["challenge name(s)"]
+        }
+      ],
+      "fiat_shamir_specified": true,
+      "notes": "..."
+    }
+  ],
   "underspecified": [
     {
       "topic": "commitment of bias vectors",
