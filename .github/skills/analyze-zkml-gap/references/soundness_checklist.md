@@ -78,6 +78,31 @@ the soundness and zero-knowledge properties claimed in the paper.
 
 ## 3. Non-Determinism Elimination
 
+### ✅ CHECK-2.5: No mock or phantom implementations
+- **What**: Every function that claims to perform a cryptographic operation (proving,
+  committing, verifying, MSM, polynomial evaluation) must actually execute that
+  operation and produce output consumed by the rest of the protocol. Look for:
+  - `prove()` or `commit()` functions with empty bodies or that return hardcoded values
+  - Counter/flag variables (e.g., `positive_check`, `exp_check`) that are incremented
+    but never used in any commitment, constraint, or verification equation
+  - `sleep()`, busy-loops, or dummy arithmetic used to simulate computation time
+  - Functions that call a crypto library but discard or ignore the result
+  - Hash/commitment calls over empty or constant inputs
+- **Why**: A mock implementation makes benchmarks appear functional while proving
+  nothing. The proof is vacuously valid — a cheating prover passes trivially.
+  Reported performance numbers are misleading because real crypto work is absent.
+- **Severity**: CRITICAL
+- **How to verify**: For each `prove()`, `commit()`, `open()`, and `verify()` function:
+  (1) read the function body — does it perform real field/group operations?
+  (2) trace the return value — is it consumed by a downstream verification step?
+  (3) search for counter variables that are incremented inside proof logic —
+  are they ever used in a constraint or commitment? If not, they are phantom.
+  (4) search for `sleep`, `thread::sleep`, `time.sleep`, empty `for` loops
+
+---
+
+## 3. Non-Determinism Elimination
+
 ### ✅ CHECK-3.1: No dropout or random sampling in the circuit
 - **What**: Dropout, random masking, stochastic depth, and similar techniques must be
   removed for ZK inference

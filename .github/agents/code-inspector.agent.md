@@ -138,14 +138,47 @@ Beyond what the inspector finds, manually search for:
 - Fixed-point utilities (`fixed_point`, `rescale`, `truncate`, `shift`)
 - Overflow guards (`range_check`, `overflow`, `clip`, `saturate`)
 
-### Step 3: Detect non-determinism
+### Step 3: Detect mock / phantom implementations
+
+Search for code that *appears* to perform cryptographic work but does not
+actually produce results consumed by the protocol. This is distinct from
+"unconstrained" — the function exists and is called, but its body is hollow.
+
+**Indicators to search for:**
+- `prove()`, `commit()`, `open()`, or `verify()` functions with empty or
+  trivial bodies (return hardcoded/dummy values, `Ok(())` with no crypto work)
+- Counter or flag variables (e.g., `positive_check`, `exp_check`, `num_ops`)
+  that are incremented inside proof logic but never read by any constraint,
+  commitment, or verification equation — these are **phantom counters**
+- `sleep()`, `thread::sleep`, `time.sleep`, `std::this_thread::sleep_for`,
+  empty `for` loops, or busy-wait patterns used to pad execution time
+- Crypto library calls whose return values are discarded (`let _ = commit(...)`,
+  unused result warnings)
+- Hash or commitment calls over empty arrays, zero vectors, or hard-coded
+  constants — these produce a valid-looking commitment that binds nothing
+
+**For each suspected mock, report:**
+```json
+{
+  "type": "phantom_counter | mock_prove | mock_commit | sleep_padding | discarded_result",
+  "file": "src/prove.rs",
+  "line": 88,
+  "function": "prove_layer()",
+  "description": "Counter `exp_check` incremented on line 92 but never referenced in any downstream commitment, constraint, or verification.",
+  "severity": "CRITICAL"
+}
+```
+
+Add these findings to the `mock_implementations` array in your output JSON.
+
+### Step 4: Detect non-determinism
 
 Search for operations that break proof determinism:
 - `dropout`, `random`, `sample`, `stochastic`, `rand`, `seed`
 - Data-dependent branching without constraint enforcement
 - Floating-point operations (should be fixed-point in ZK)
 
-### Step 4: Flag unclear areas
+### Step 5: Flag unclear areas
 
 For each item in the extraction checklist (see zkp_foundations.md), if the code
 doesn't clearly address it:
@@ -218,6 +251,16 @@ Return a JSON document on stdout:
     "range_check_bound": "2^12",
     "evidence": [...]
   },
+  "mock_implementations": [
+    {
+      "type": "phantom_counter",
+      "file": "src/prove.rs",
+      "line": 88,
+      "function": "prove_layer()",
+      "description": "Counter `exp_check` incremented but never used in any constraint or commitment",
+      "severity": "CRITICAL"
+    }
+  ],
   "non_determinism": [
     {
       "type": "dropout",

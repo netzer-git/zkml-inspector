@@ -122,6 +122,9 @@ don't match any known pattern.
 | Precision mismatch | Paper assumes 16-bit, code uses 12-bit | WARNING |
 | Weak commitment | Hash function is not collision-resistant | CRITICAL |
 | Non-determinism | Dropout/random still in circuit | CRITICAL |
+| Mock/phantom implementation | Function claims to prove/commit but body is empty, returns dummy values, or uses sleep/counters instead of real crypto — proof is vacuously valid | CRITICAL |
+| Phantom counter | Variable incremented inside proof logic but never consumed by any constraint, commitment, or verification equation — simulates work without binding anything | CRITICAL |
+| Discarded crypto result | Crypto library call whose return value is unused (`let _ = commit(...)`) — commitment/proof exists in code but is not part of the protocol | CRITICAL |
 
 ### Phase C: Protocol Transcript Integrity Audit
 

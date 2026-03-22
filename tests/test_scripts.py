@@ -309,6 +309,31 @@ class TestAgentContent:
                 f"{filename} should reference zkp_foundations.md"
             )
 
+    def test_mock_phantom_detection_in_code_inspector(self) -> None:
+        """code-inspector must have the mock/phantom implementation detection step."""
+        text = (AGENTS_DIR / "code-inspector.agent.md").read_text(encoding="utf-8")
+        assert "mock" in text.lower() or "phantom" in text.lower(), (
+            "code-inspector should detect mock/phantom implementations"
+        )
+        assert "mock_implementations" in text, (
+            "code-inspector output should include mock_implementations field"
+        )
+
+    def test_mock_phantom_detection_in_auditor(self) -> None:
+        """zkp-auditor pattern table must include mock/phantom patterns."""
+        text = (AGENTS_DIR / "zkp-auditor.agent.md").read_text(encoding="utf-8")
+        assert "phantom" in text.lower() or "mock" in text.lower(), (
+            "zkp-auditor should detect mock/phantom patterns"
+        )
+
+    def test_mock_phantom_detection_in_soundness_checklist(self) -> None:
+        """Soundness checklist must include a CHECK for mock implementations."""
+        text = (REFERENCES_DIR / "soundness_checklist.md").read_text(encoding="utf-8")
+        assert "CHECK-2.5" in text, (
+            "soundness_checklist.md should include CHECK-2.5 for mock/phantom detection"
+        )
+        assert "phantom" in text.lower() or "mock" in text.lower()
+
 
 # ============================================================================
 # Reference file quality tests
