@@ -2,7 +2,7 @@
   "name": "zkml-inspector",
   "version": "0.1.0",
   "displayName": "zkML Inspector — Paper-to-Code Gap Analyzer",
-  "description": "Analyzes gaps between zkML research papers and their implementations. Generates discrepancy & optimization reports covering logic gaps, performance bottlenecks, and soundness risks.",
+  "description": "Analyzes gaps between zkML research papers and their implementations. Finds soundness violations, missing constraints, precision mismatches, and uncommitted values.",
   "author": "zkml-inspector",
   "repository": "https://github.com/zkml-inspector/zkml-inspector",
   "license": "MIT",
@@ -34,10 +34,6 @@
       "path": ".github/agents/code-inspector.agent.md"
     },
     {
-      "name": "zkp-auditor",
-      "path": ".github/agents/zkp-auditor.agent.md"
-    },
-    {
       "name": "report-writer",
       "path": ".github/agents/report-writer.agent.md"
     }
@@ -50,21 +46,8 @@
     {
       "name": "analyze-quick",
       "path": ".github/prompts/analyze-quick.prompt.md"
-    },
-    {
-      "name": "audit-soundness",
-      "path": ".github/prompts/audit-soundness.prompt.md"
-    },
-    {
-      "name": "inspect-code",
-      "path": ".github/prompts/inspect-code.prompt.md"
     }
   ],
-  "requirements": {
-    "tools": ["execute", "read", "search"],
-    "python": ">=3.10",
-    "dependencies": ".github/skills/analyze-zkml-gap/scripts/requirements.txt"
-  },
   "tags": [
     "zkml",
     "zero-knowledge",

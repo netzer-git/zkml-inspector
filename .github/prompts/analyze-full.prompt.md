@@ -1,5 +1,5 @@
 ---
-description: "Full discrepancy & optimization analysis of a zkML paper vs codebase"
+description: "Full audit of a zkML paper vs codebase implementation"
 agent: "zkml-inspector"
 tools:
   - read
@@ -11,23 +11,23 @@ argument-hint: "paper=<path_to_paper> codebase=<path_to_codebase>"
 
 # Full zkML Analysis
 
-Perform a comprehensive analysis comparing the research paper against the implementation codebase using the sub-agent pipeline.
+Perform a comprehensive audit comparing the research paper against the implementation codebase.
 
 ## Instructions
 
 1. Confirm the paper path and codebase path with the user
-2. Run the full orchestrator pipeline, dispatching agents in order:
-   - **paper-analyst + code-inspector** (parallel): Extract structured data from both
-   - **zkp-auditor**: Core soundness analysis with follow-up questions to agents 1 & 2, plus precision & gate cost analysis
+2. Run the sequential pipeline:
+   - **paper-analyst**: Extract verification checklist from the paper (commitment obligations, operator specs, constraints, precision requirements)
+   - **code-inspector**: Audit the codebase against the paper manifest (commitment audit, operator coverage, soundness checks, protocol transcript, precision)
    - **report-writer**: Assemble the final Markdown report
 
 3. The report must cover ALL of these sections:
    - Executive Summary
+   - Commitment Audit
    - Operator Coverage Matrix (✅/⚠️/❌/➕)
-   - ZKP Lifecycle Audit (setup/commitment, proving/constraints, verification)
-   - Soundness Findings (from the 7-point checklist)
-   - Precision Analysis (fixed-point scaling mismatches)
-   - Performance Bottlenecks (gate costs, Transformer Killers)
+   - Soundness Findings
+   - Protocol Transcript Findings (if any)
+   - Precision Findings (if any)
    - Recommendations (prioritized by severity: CRITICAL → WARNING → INFO)
 
 4. Present the report to the user and offer to dive deeper into any section

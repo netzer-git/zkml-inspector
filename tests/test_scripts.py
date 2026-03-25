@@ -2,7 +2,7 @@
 """Tests for the zkml-inspector agent configuration.
 
 Validates that all agent definitions, reference files, prompt files, and
-the report template are present, well-structured, and internally consistent.
+the skill definition are present, well-structured, and internally consistent.
 
 Run with:
     python -m pytest tests/ -v
@@ -24,7 +24,6 @@ AGENTS_DIR = ROOT / ".github" / "agents"
 PROMPTS_DIR = ROOT / ".github" / "prompts"
 SKILL_DIR = ROOT / ".github" / "skills" / "analyze-zkml-gap"
 REFERENCES_DIR = SKILL_DIR / "references"
-ASSETS_DIR = SKILL_DIR / "assets"
 
 
 # ---------------------------------------------------------------------------
@@ -35,15 +34,12 @@ EXPECTED_AGENTS = [
     "zkml-inspector.agent.md",
     "paper-analyst.agent.md",
     "code-inspector.agent.md",
-    "zkp-auditor.agent.md",
     "report-writer.agent.md",
 ]
 
 EXPECTED_PROMPTS = [
     "analyze-full.prompt.md",
     "analyze-quick.prompt.md",
-    "audit-soundness.prompt.md",
-    "inspect-code.prompt.md",
 ]
 
 EXPECTED_REFERENCES = [
@@ -51,11 +47,6 @@ EXPECTED_REFERENCES = [
     "operator_catalog.md",
     "soundness_checklist.md",
     "approximation_db.md",
-    "gate_cost_table.md",
-]
-
-EXPECTED_ASSETS = [
-    "report_template.md",
 ]
 
 
@@ -64,7 +55,7 @@ EXPECTED_ASSETS = [
 # ============================================================================
 
 class TestFileExistence:
-    """Verify all required files are present."""
+    """Verify all required files are present and removed files are gone."""
 
     @pytest.mark.parametrize("filename", EXPECTED_AGENTS)
     def test_agent_file_exists(self, filename: str) -> None:
@@ -80,11 +71,6 @@ class TestFileExistence:
     def test_reference_file_exists(self, filename: str) -> None:
         path = REFERENCES_DIR / filename
         assert path.is_file(), f"Missing reference file: {path}"
-
-    @pytest.mark.parametrize("filename", EXPECTED_ASSETS)
-    def test_asset_file_exists(self, filename: str) -> None:
-        path = ASSETS_DIR / filename
-        assert path.is_file(), f"Missing asset file: {path}"
 
     def test_skill_file_exists(self) -> None:
         assert (SKILL_DIR / "SKILL.md").is_file()
@@ -130,14 +116,26 @@ class TestAgentFrontmatter:
         fm = _extract_frontmatter(AGENTS_DIR / "zkml-inspector.agent.md")
         assert "agents:" in fm
 
-    def test_auditor_has_agents_list(self) -> None:
-        fm = _extract_frontmatter(AGENTS_DIR / "zkp-auditor.agent.md")
-        assert "agents:" in fm
+    def test_orchestrator_lists_three_agents(self) -> None:
+        """Orchestrator should list exactly 3 sub-agents."""
+        fm = _extract_frontmatter(AGENTS_DIR / "zkml-inspector.agent.md")
+        # Handle both inline [a, b, c] and block sequence (- a\n  - b\n  - c)
+        inline_match = re.search(r"agents:\s*\[([^\]]*)\]", fm)
+        if inline_match:
+            agents = [a.strip() for a in inline_match.group(1).split(",")]
+        else:
+            # Block sequence: find all "- <name>" lines after "agents:"
+            block_match = re.search(r"agents:\s*\n((?:\s+-\s+\S+\n?)+)", fm)
+            assert block_match, "Could not parse agents list"
+            agents = re.findall(r"-\s+(\S+)", block_match.group(1))
+        assert len(agents) == 3, f"Expected 3 agents, got {len(agents)}: {agents}"
+        assert "paper-analyst" in agents
+        assert "code-inspector" in agents
+        assert "report-writer" in agents
 
     @pytest.mark.parametrize("filename", [
         "paper-analyst.agent.md",
         "code-inspector.agent.md",
-        "zkp-auditor.agent.md",
         "report-writer.agent.md",
     ])
     def test_sub_agents_not_user_invocable(self, filename: str) -> None:
@@ -197,6 +195,38 @@ class TestNoScriptReferences:
 
 
 # ============================================================================
+# No removed component references tests
+# ============================================================================
+
+class TestNoRemovedComponentReferences:
+    """Ensure no file references removed components (zkp-auditor, gate_cost_table, etc.)."""
+
+    @pytest.mark.parametrize("filename", EXPECTED_AGENTS)
+    def test_agent_no_auditor_refs(self, filename: str) -> None:
+        text = (AGENTS_DIR / filename).read_text(encoding="utf-8")
+        assert "zkp-auditor" not in text, f"{filename} still references zkp-auditor"
+        assert "gate_cost_table" not in text, f"{filename} still references gate_cost_table"
+
+    @pytest.mark.parametrize("filename", EXPECTED_PROMPTS)
+    def test_prompt_no_auditor_refs(self, filename: str) -> None:
+        text = (PROMPTS_DIR / filename).read_text(encoding="utf-8")
+        assert "zkp-auditor" not in text, f"{filename} still references zkp-auditor"
+        assert "gate_cost_table" not in text, f"{filename} still references gate_cost_table"
+
+    def test_skill_no_auditor_refs(self) -> None:
+        text = (SKILL_DIR / "SKILL.md").read_text(encoding="utf-8")
+        assert "zkp-auditor" not in text, "SKILL.md still references zkp-auditor"
+        assert "gate_cost_table" not in text, "SKILL.md still references gate_cost_table"
+
+    def test_copilot_instructions_no_auditor_refs(self) -> None:
+        path = ROOT / ".github" / "copilot-instructions.md"
+        if path.exists():
+            text = path.read_text(encoding="utf-8")
+            assert "zkp-auditor" not in text
+            assert "gate_cost_table" not in text
+
+
+# ============================================================================
 # Agent no execute tool tests
 # ============================================================================
 
@@ -206,7 +236,6 @@ class TestNoExecuteTool:
     @pytest.mark.parametrize("filename", [
         "paper-analyst.agent.md",
         "code-inspector.agent.md",
-        "zkp-auditor.agent.md",
         "report-writer.agent.md",
     ])
     def test_sub_agent_no_execute_tool(self, filename: str) -> None:
@@ -234,45 +263,52 @@ class TestAgentContent:
         assert '"operators"' in text
         assert '"proof_system"' in text
 
+    def test_paper_analyst_has_commitment_obligations(self) -> None:
+        """paper-analyst must include commitment_obligations in its output."""
+        text = (AGENTS_DIR / "paper-analyst.agent.md").read_text(encoding="utf-8")
+        assert '"commitment_obligations"' in text, (
+            "paper-analyst output should include commitment_obligations field"
+        )
+
+    def test_paper_analyst_emphasizes_commitments(self) -> None:
+        """paper-analyst must have exhaustive commitment extraction."""
+        text = (AGENTS_DIR / "paper-analyst.agent.md").read_text(encoding="utf-8")
+        assert "EXHAUSTIVE" in text.upper() or "exhaustive" in text.lower(), (
+            "paper-analyst should emphasize exhaustive commitment extraction"
+        )
+
     def test_code_inspector_has_output_format(self) -> None:
         text = (AGENTS_DIR / "code-inspector.agent.md").read_text(encoding="utf-8")
         assert "## Output Format" in text
-        assert '"framework"' in text
-        assert '"lifecycle"' in text
+        assert '"findings"' in text or '"summary"' in text
 
-    def test_code_inspector_has_framework_guide(self) -> None:
+    def test_code_inspector_receives_paper_manifest(self) -> None:
+        """code-inspector must receive paper manifest as input."""
         text = (AGENTS_DIR / "code-inspector.agent.md").read_text(encoding="utf-8")
-        assert "## Framework Detection Guide" in text
-        assert "halo2" in text
-        assert "circom" in text
-        assert "ezkl" in text
+        assert "paper manifest" in text.lower() or "Paper manifest" in text, (
+            "code-inspector must reference paper manifest as input"
+        )
 
-    def test_zkp_auditor_has_output_format(self) -> None:
-        text = (AGENTS_DIR / "zkp-auditor.agent.md").read_text(encoding="utf-8")
-        assert "## Output Format" in text
-        assert '"audit_summary"' in text
-        assert '"soundness_checklist"' in text
+    def test_code_inspector_produces_findings(self) -> None:
+        """code-inspector output is audit findings, not a code manifest."""
+        text = (AGENTS_DIR / "code-inspector.agent.md").read_text(encoding="utf-8")
+        assert '"commitment_audit"' in text or '"operator_coverage"' in text or '"soundness_findings"' in text, (
+            "code-inspector output should include audit finding arrays"
+        )
 
-    def test_zkp_auditor_has_follow_up_format(self) -> None:
-        """zkp-auditor must define the follow_up_questions output format."""
-        text = (AGENTS_DIR / "zkp-auditor.agent.md").read_text(encoding="utf-8")
-        assert '"follow_up_questions"' in text
-        assert '"target_agent"' in text
-        assert '"related_finding_id"' in text
+    def test_code_inspector_no_framework_detection_table(self) -> None:
+        """code-inspector should not have a framework detection table."""
+        text = (AGENTS_DIR / "code-inspector.agent.md").read_text(encoding="utf-8")
+        assert "## Framework Detection Guide" not in text, (
+            "code-inspector should not have a framework detection guide table"
+        )
 
-    def test_zkp_auditor_follow_up_section(self) -> None:
-        """zkp-auditor must have a Follow-Up Questions section."""
-        text = (AGENTS_DIR / "zkp-auditor.agent.md").read_text(encoding="utf-8")
-        assert "## Follow-Up Questions" in text
-        assert "follow_up_answers" in text
-
-    def test_zkp_auditor_references_gate_cost_table(self) -> None:
-        text = (AGENTS_DIR / "zkp-auditor.agent.md").read_text(encoding="utf-8")
-        assert "gate_cost_table.md" in text
-
-    def test_zkp_auditor_references_approximation_db(self) -> None:
-        text = (AGENTS_DIR / "zkp-auditor.agent.md").read_text(encoding="utf-8")
-        assert "approximation_db.md" in text
+    def test_code_inspector_references_soundness_checklist(self) -> None:
+        """code-inspector must reference soundness_checklist.md."""
+        text = (AGENTS_DIR / "code-inspector.agent.md").read_text(encoding="utf-8")
+        assert "soundness_checklist.md" in text, (
+            "code-inspector should reference soundness_checklist.md"
+        )
 
     def test_report_writer_has_dedup_rule(self) -> None:
         text = (AGENTS_DIR / "report-writer.agent.md").read_text(encoding="utf-8")
@@ -294,36 +330,36 @@ class TestAgentContent:
             "Orchestrator should instruct writing the report to a file"
         )
 
-    def test_orchestrator_has_follow_up_round(self) -> None:
-        """Orchestrator must document the follow-up round workflow."""
+    def test_orchestrator_has_sequential_pipeline(self) -> None:
+        """Orchestrator must describe the sequential pipeline."""
         text = (AGENTS_DIR / "zkml-inspector.agent.md").read_text(encoding="utf-8")
-        assert "Follow-Up Round" in text
-        assert "follow_up_questions" in text
-        assert "follow_up_answers" in text
+        assert "sequential" in text.lower(), (
+            "Orchestrator should describe the sequential pipeline"
+        )
 
-    def test_all_agents_reference_zkp_foundations(self) -> None:
-        """All analysis agents should reference the shared ZKP foundations."""
-        for filename in ["paper-analyst.agent.md", "code-inspector.agent.md", "zkp-auditor.agent.md"]:
+    def test_orchestrator_no_follow_up_rounds(self) -> None:
+        """Orchestrator should NOT have follow-up round logic."""
+        text = (AGENTS_DIR / "zkml-inspector.agent.md").read_text(encoding="utf-8")
+        assert "Follow-Up Round" not in text, (
+            "Orchestrator should not have follow-up round logic"
+        )
+        assert "follow_up_questions" not in text, (
+            "Orchestrator should not reference follow_up_questions"
+        )
+
+    def test_analysis_agents_reference_zkp_foundations(self) -> None:
+        """Analysis agents should reference the shared ZKP foundations."""
+        for filename in ["paper-analyst.agent.md", "code-inspector.agent.md"]:
             text = (AGENTS_DIR / filename).read_text(encoding="utf-8")
             assert "zkp_foundations.md" in text, (
                 f"{filename} should reference zkp_foundations.md"
             )
 
     def test_mock_phantom_detection_in_code_inspector(self) -> None:
-        """code-inspector must have the mock/phantom implementation detection step."""
+        """code-inspector must have the mock/phantom implementation detection."""
         text = (AGENTS_DIR / "code-inspector.agent.md").read_text(encoding="utf-8")
         assert "mock" in text.lower() or "phantom" in text.lower(), (
             "code-inspector should detect mock/phantom implementations"
-        )
-        assert "mock_implementations" in text, (
-            "code-inspector output should include mock_implementations field"
-        )
-
-    def test_mock_phantom_detection_in_auditor(self) -> None:
-        """zkp-auditor pattern table must include mock/phantom patterns."""
-        text = (AGENTS_DIR / "zkp-auditor.agent.md").read_text(encoding="utf-8")
-        assert "phantom" in text.lower() or "mock" in text.lower(), (
-            "zkp-auditor should detect mock/phantom patterns"
         )
 
     def test_mock_phantom_detection_in_soundness_checklist(self) -> None:
@@ -353,39 +389,17 @@ class TestReferenceContent:
         for op in ["MatMul", "Softmax", "ReLU", "LayerNorm"]:
             assert op in text, f"operator_catalog.md missing {op}"
 
-    def test_gate_cost_table_has_costs(self) -> None:
-        text = (REFERENCES_DIR / "gate_cost_table.md").read_text(encoding="utf-8")
-        # Should contain a markdown table with numeric cost values
-        assert "|" in text, "gate_cost_table.md should contain a markdown table"
-
     def test_soundness_checklist_has_checks(self) -> None:
         text = (REFERENCES_DIR / "soundness_checklist.md").read_text(encoding="utf-8")
         assert "CHECK" in text, "soundness_checklist.md should contain CHECK items"
 
-
-# ============================================================================
-# Report template tests
-# ============================================================================
-
-class TestReportTemplate:
-    """Validate the report template structure."""
-
-    def test_template_has_required_sections(self) -> None:
-        text = (ASSETS_DIR / "report_template.md").read_text(encoding="utf-8")
-        required_sections = [
-            "Executive Summary",
-            "Operator Coverage",
-            "Precision Analysis",
-            "Soundness",
-            "Recommendations",
-        ]
-        for section in required_sections:
-            assert section in text, f"Report template missing section: {section}"
-
-    def test_template_has_severity_symbols(self) -> None:
-        text = (ASSETS_DIR / "report_template.md").read_text(encoding="utf-8")
-        for symbol in ["✅", "⚠️", "❌"]:
-            assert symbol in text, f"Report template missing status symbol: {symbol}"
+    def test_no_framework_specific_mentions_in_references(self) -> None:
+        """Reference files should not contain framework-specific mentions."""
+        for filename in EXPECTED_REFERENCES:
+            text = (REFERENCES_DIR / filename).read_text(encoding="utf-8")
+            assert "EZKL" not in text and "ezkl" not in text, (
+                f"{filename} contains EZKL-specific mention — should be framework-agnostic"
+            )
 
 
 # ============================================================================
@@ -398,7 +412,7 @@ class TestCrossConsistency:
     def test_orchestrator_lists_all_sub_agents(self) -> None:
         """The orchestrator should reference all sub-agents."""
         text = (AGENTS_DIR / "zkml-inspector.agent.md").read_text(encoding="utf-8")
-        for agent in ["paper-analyst", "code-inspector", "zkp-auditor", "report-writer"]:
+        for agent in ["paper-analyst", "code-inspector", "report-writer"]:
             assert agent in text, f"Orchestrator missing sub-agent: {agent}"
 
     def test_skill_references_match_files(self) -> None:

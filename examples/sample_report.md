@@ -1,4 +1,4 @@
-# zkML Discrepancy & Optimization Report
+# zkML Gap Analysis Report
 
 <!-- NOTE: This is a sample report for illustration purposes.
      All file paths (e.g., src/ops/matmul.rs) are fictional and do not
@@ -6,7 +6,6 @@
 
 > **Paper**: Efficient Zero-Knowledge Proofs for Neural Network Inference
 > **Codebase**: ./example-zkml-project/
-> **Framework**: EZKL (Python/Rust)
 > **Date**: 2026-03-14
 > **Analyzer**: zkml-inspector v0.1.0
 
@@ -27,8 +26,6 @@ replacement — a significant behavioral change not documented in the paper.
 | Operators in code | 5 |
 | Coverage | 83% |
 | Missing operators | 1 (LayerNorm) |
-| Transformer Killers | 3 (Softmax, LayerNorm, GELU) |
-| Total estimated gates | 247,400 |
 | Critical issues | 3 |
 | Warnings | 4 |
 
@@ -47,9 +44,20 @@ replacement — a significant behavioral change not documented in the paper.
 
 ---
 
-## 2. Logic Gaps
+## 2. Commitment Audit
 
-### 2.1 Missing Constraints
+### 2.1 Missing Commitments
+
+| # | Severity | Value | Paper Location | Expected Commitment | Status |
+|---|----------|-------|----------------|---------------------|--------|
+| 1 | CRITICAL | Bias vectors | §5, para 2 | Poseidon hash in src/commitment.rs | Not committed |
+| 2 | WARNING | Intermediate activations | §5, para 3 | Binding commitment after each layer | Partial — only final output committed |
+
+---
+
+## 3. Soundness Findings
+
+### 3.1 Missing Constraints
 
 | # | Severity | Constraint | Paper Location | Expected in Code | Status |
 |---|----------|-----------|----------------|-------------------|--------|
@@ -57,22 +65,22 @@ replacement — a significant behavioral change not documented in the paper.
 | 2 | CRITICAL | Intermediate activation constraints | §5, para 3 | src/circuit.rs | Missing for LayerNorm output |
 | 3 | WARNING | Range check on all intermediates | §5, para 4 | src/range.rs | Present but threshold is 2^12 not 2^15 |
 
-### 2.2 Non-Deterministic Operations
+### 3.2 Non-Deterministic Operations
 
 | # | Severity | Operation | File | Line | Issue |
 |---|----------|-----------|------|------|-------|
 | 1 | WARNING | Dropout | src/model/transformer.rs | 42 | Dropout still present in forward pass |
 
-### 2.3 Unconstrained Intermediate Values
+### 3.3 Unconstrained Intermediate Values
 
 - LayerNorm output is unconstrained — a prover could substitute arbitrary normalized values
 - This allows a "layer-skipping attack" where the prover skips normalization entirely
 
 ---
 
-## 3. Precision Analysis
+## 4. Precision Findings
 
-### 3.1 Fixed-Point Configuration
+### 4.1 Fixed-Point Configuration
 
 | Parameter | Paper | Code | Match? |
 |-----------|-------|------|--------|
@@ -80,7 +88,7 @@ replacement — a significant behavioral change not documented in the paper.
 | Quantization method | Symmetric per-tensor | Symmetric per-tensor | ✅ |
 | Field size | Not specified | BN254 (254-bit prime) | ✅ |
 
-### 3.2 Precision Gaps
+### 4.2 Precision Gaps
 
 | # | Severity | Operator | Required Bits | Actual Bits | Gap | Recommendation |
 |---|----------|----------|---------------|-------------|-----|----------------|
@@ -90,30 +98,7 @@ replacement — a significant behavioral change not documented in the paper.
 
 ---
 
-## 4. Performance Bottlenecks
-
-### 4.1 Gate Cost Summary
-
-| # | Operator | Implementation | Est. Gates | % of Total | Severity |
-|---|----------|----------------|------------|------------|----------|
-| 1 | Attention | composite | 200,000 | 80.9% | CRITICAL |
-| 2 | Softmax | piecewise-linear (3 seg) | 5,000 | 2.0% | WARNING |
-| 3 | MatMul (FFN) | exact | 10,000 | 4.0% | INFO |
-| 4 | ReLU | exact | 100 | 0.04% | INFO |
-
-**Total Estimated Gates**: 247,400 (moderate — proving time ~5s on GPU)
-
-### 4.2 Transformer Killer Analysis
-
-| Operator | Paper Specifies | Code Uses | Cost (exact) | Cost (current) | Savings if Optimized |
-|----------|-----------------|-----------|-------------|----------------|----------------------|
-| Softmax | 8-seg piecewise-linear | 3-seg piecewise-linear | 100,000 | 5,000 | Already using approx — increase segments |
-| LayerNorm | Newton + lookup | NOT IMPLEMENTED | 80,000 | 0 | Must implement: ~1,200 gates with lookup |
-| GELU | Lookup table | ReLU substitute | 80,000 | 100 | Replacing with ReLU is cheap but changes model behavior |
-
----
-
-## 5. Soundness & Zero-Knowledge Risks
+## 5. Protocol Transcript Findings
 
 ### 5.1 Critical Soundness Issues
 

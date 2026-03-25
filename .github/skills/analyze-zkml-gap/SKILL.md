@@ -1,12 +1,12 @@
 ---
 name: analyze-zkml-gap
 description: >-
-  Shared library of scripts, references, and templates for zkML gap analysis.
-  Used by the sub-agent pipeline (paper-analyst, code-inspector, zkp-auditor,
-  report-writer) orchestrated by the zkml-inspector agent.
-  Do NOT invoke this skill directly — use the zkml-inspector agent or one of
-  the prompt files instead. Triggers: "zkml gap", "paper vs code",
-  "discrepancy report", "audit zkml", "implementation gap", "circuit analysis".
+  Shared library of references for zkML gap analysis. Used by the sub-agent
+  pipeline (paper-analyst, code-inspector, report-writer) orchestrated by
+  the zkml-inspector agent. Do NOT invoke this skill directly — use the
+  zkml-inspector agent or one of the prompt files instead.
+  Triggers: "zkml gap", "paper vs code", "discrepancy report",
+  "audit zkml", "implementation gap", "circuit analysis".
 argument-hint: "Use the zkml-inspector agent instead of invoking this skill directly"
 ---
 
@@ -22,26 +22,19 @@ dispatches sub-agents that use these resources.
 
 | Reference | Used By | Purpose |
 |-----------|---------|---------|
-| `references/zkp_foundations.md` | paper-analyst, code-inspector, zkp-auditor | Shared ZKP knowledge (commit/prove/verify lifecycle) |
-| `references/operator_catalog.md` | paper-analyst, zkp-auditor | Known operators with ZK implementation patterns |
-| `references/soundness_checklist.md` | zkp-auditor | 7-point soundness & ZK security audit |
-| `references/approximation_db.md` | paper-analyst, zkp-auditor | Approximation strategies with error bounds |
-| `references/gate_cost_table.md` | zkp-auditor | Gate cost estimates by operator and proof system |
-
-### Assets
-
-| Asset | Used By | Purpose |
-|-------|---------|---------|
-| `assets/report_template.md` | report-writer | Markdown template for final report |
+| `references/zkp_foundations.md` | paper-analyst, code-inspector | Shared ZKP knowledge (commit/prove/verify lifecycle) |
+| `references/operator_catalog.md` | paper-analyst | Known operators with ZK implementation patterns |
+| `references/soundness_checklist.md` | code-inspector | Soundness & ZK security audit checklist |
+| `references/approximation_db.md` | paper-analyst | Approximation strategies with error bounds |
 
 ## Agent Pipeline
 
 The orchestrator (`zkml-inspector`) dispatches agents in this order:
 
 ```
-1. paper-analyst + code-inspector  (parallel — independent)
-2. zkp-auditor                     (uses outputs from 1, can ask follow-ups, runs precision & cost analysis)
-3. report-writer                   (uses all outputs)
+1. paper-analyst       (extracts verification checklist from paper)
+2. code-inspector      (audits codebase against the checklist)
+3. report-writer       (assembles final Markdown report)
 ```
 
 See `.github/agents/` for individual agent definitions.

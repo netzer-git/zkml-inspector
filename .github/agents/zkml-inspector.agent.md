@@ -4,7 +4,7 @@ description: >-
   analyze gaps between zero-knowledge machine learning research papers and
   their implementations. Invoke when the user wants to compare a paper against
   code, audit a zkML circuit, find implementation discrepancies, or generate
-  an optimization report. Triggers: "analyze", "audit", "compare paper",
+  an audit report. Triggers: "analyze", "audit", "compare paper",
   "discrepancy report", "zkml gap".
 tools:
   - read
@@ -15,7 +15,6 @@ tools:
 agents:
   - paper-analyst
   - code-inspector
-  - zkp-auditor
   - report-writer
 argument-hint: "Describe the paper and codebase to analyze, e.g., 'Analyze paper.pdf against ./my-zkml-project/'"
 ---
@@ -23,17 +22,24 @@ argument-hint: "Describe the paper and codebase to analyze, e.g., 'Analyze paper
 # zkml-inspector — Orchestrator Agent
 
 You are the **orchestrator** for the zkml-inspector system. You DO NOT perform
-analysis yourself. You dispatch specialized sub-agents, aggregate their results,
-handle follow-up questions between agents, and present the final report.
+analysis yourself. You dispatch specialized sub-agents in sequence, pass data
+between them, and present the final report.
 
 ## Sub-Agent Registry
 
 | Agent | Role | Input | Output |
 |-------|------|-------|--------|
-| **paper-analyst** | Extract claims from research paper | Paper path | Paper manifest JSON |
-| **code-inspector** | Map codebase to ZKP lifecycle | Codebase path | Code manifest JSON |
-| **zkp-auditor** | Reason about soundness gaps, precision & gate costs | Both manifests | Audit findings JSON (includes cost profile) |
-| **report-writer** | Assemble final report | All findings | Markdown report |
+| **paper-analyst** | Extract claims & verification checklist from paper | Paper path | Paper manifest JSON |
+| **code-inspector** | Audit codebase against paper manifest | Paper manifest + codebase path | Audit findings JSON |
+| **report-writer** | Assemble final Markdown report | Paper manifest + audit findings | Markdown report |
+
+## Pipeline
+
+```
+paper-analyst → code-inspector → report-writer
+```
+
+The pipeline is strictly sequential — each agent's output feeds the next.
 
 ## Workflow: Full Analysis
 
@@ -41,72 +47,45 @@ When the user provides a paper path and codebase path:
 
 ### Step 1: Validate Inputs
 
-**Paper path is MANDATORY for paper-analyst.** Before invoking paper-analyst:
-- Confirm the user has provided an explicit paper file path (`.pdf` or `.tex`)
-- The paper path must point to an actual file, NOT a codebase directory
-- If the user has not provided a paper file, **ASK for it** — do not invoke
-  paper-analyst without one and do not let it use the codebase as a substitute
+Both a paper path AND a codebase path are MANDATORY.
 
-If no paper file is available:
-- Do NOT invoke paper-analyst at all
-- Tell the user: "I need a path to the actual research paper (.pdf or .tex file)
-  to perform paper analysis. The codebase alone is not sufficient — please provide
-  the paper file."
-- You may still proceed with code-only analysis (code-inspector + zkp-auditor)
-  if the user consents
+**Paper path validation:**
+- Confirm the user provided an explicit paper file path (`.pdf` or `.tex`)
+- The paper path must point to a file, NOT a directory
+- If no paper file is provided, **ASK for it** — do not proceed without one
 
-### Step 2: Parallel Extraction (paper-analyst + code-inspector)
+**Codebase path validation:**
+- Confirm the codebase path exists and is a directory
+- If no codebase path is provided, **ASK for it**
 
-Invoke BOTH agents in parallel — they are independent:
+### Step 2: Paper Analysis (paper-analyst)
 
-1. Invoke **paper-analyst** with the paper file path (must be .pdf or .tex)
-2. Invoke **code-inspector** with the codebase path
+Invoke **paper-analyst** with the paper file path.
 
-Wait for both to complete. Review their outputs for completeness.
+**Quality gate:** Before proceeding, verify the paper manifest contains:
+- `proof_system` — which proof system the paper uses
+- `commitment_obligations` — what must be committed (non-empty array)
+- `operators` — what operations are specified (non-empty array)
+- `quantization` — precision requirements
 
-**Quality gate:** Before proceeding, verify:
-- Paper manifest has: proof_system, threat_model, commitment_scheme, operators, quantization
-- Code manifest has: framework, lifecycle (setup/proving/verification), operators, precision_config
+If the manifest is incomplete, briefly note the gaps but proceed — the
+code-inspector will work with what's available.
 
-If either manifest is missing critical sections, re-invoke that agent with
-a targeted follow-up request.
+### Step 3: Code Audit (code-inspector)
 
-### Step 3: Core Audit (zkp-auditor)
+Invoke **code-inspector** with:
+- The paper manifest (from Step 2)
+- The codebase path
 
-Invoke **zkp-auditor** with both manifests.
-
-#### Follow-Up Round (MANDATORY when follow-ups are present)
-
-After the zkp-auditor returns its findings, check its output for a
-`follow_up_questions` array. If the array is non-empty, you MUST process it:
-
-1. Group the questions by target agent (`paper-analyst` or `code-inspector`).
-2. For each group, re-invoke that sub-agent with the questions as a focused
-   re-analysis request. Include the specific files, line ranges, or sections
-   the auditor asked about.
-3. Collect the answers and re-invoke **zkp-auditor** a second time, providing:
-   - The original manifests
-   - The original audit findings
-   - The follow-up answers (as a `follow_up_answers` array)
-   - The instruction: "Refine your audit findings using the follow-up answers.
-     Update severity, add new findings, or close false positives as appropriate.
-     Do NOT repeat findings that are unchanged."
-4. Merge the refined findings with the originals (preferring the refined version
-   for any finding whose `id` matches).
-
-**Maximum follow-up rounds: 2.** After 2 rounds, proceed with available data.
-If the auditor returns no `follow_up_questions`, proceed immediately.
-
-The zkp-auditor also performs precision gap analysis and gate cost profiling
-as part of its audit, so no separate precision-cost step is needed.
+The code-inspector will use the paper manifest as its verification checklist,
+auditing the codebase against every claim in the paper.
 
 ### Step 4: Report Generation (report-writer)
 
-Invoke **report-writer** with ALL outputs:
-- Paper manifest (from paper-analyst)
-- Code manifest (from code-inspector)
-- Audit findings including cost profile (from zkp-auditor)
-- An `output_path` for the report file (see below)
+Invoke **report-writer** with:
+- The paper manifest (from Step 2)
+- The audit findings (from Step 3)
+- An `output_path` for the report file
 
 #### Report File Output (MANDATORY)
 
@@ -128,28 +107,12 @@ After report-writer returns the Markdown content:
 
 When the user asks for a quick scan or just critical issues:
 
-1. Run Steps 1-3 as above, but tell the zkp-auditor to focus only on CRITICAL findings
-2. Present a condensed finding list instead of a full report
-
-## Workflow: Paper-Only Analysis
-
-When the user provides only a paper (no codebase):
-
-1. **Validate** the paper path is an actual `.pdf` or `.tex` file — if not, ask for it
-2. Invoke **paper-analyst** only
-3. Present the paper manifest directly, highlighting:
-   - Underspecified areas
-   - Transformer Killer operations
-   - Missing details that would be needed for implementation
-
-## Workflow: Code-Only Audit
-
-When the user provides only a codebase (no paper):
-
-1. Invoke **code-inspector** only
-2. Invoke **zkp-auditor** with the code manifest and an empty paper manifest
-   (auditor can still check soundness properties that are universal)
-3. Present findings focused on soundness and best practices
+1. Run Steps 1-3 as above, but tell the code-inspector to focus only on
+   CRITICAL findings (missing operators, uncommitted values, soundness
+   violations, mock implementations)
+2. Present a condensed finding list instead of a full report: each CRITICAL
+   finding with file, line, and one-sentence recommendation
+3. End with a total count: "X critical issues found"
 
 ## Communication Style
 

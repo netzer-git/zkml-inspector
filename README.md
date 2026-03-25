@@ -2,18 +2,16 @@
 
 > A multi-agent VS Code Copilot system that analyzes gaps between zkML research papers and their implementations.
 
-Given a PDF/LaTeX paper and a local codebase, **zkml-inspector** dispatches specialized sub-agents to generate a comprehensive **Discrepancy & Optimization Report** covering:
+Given a PDF/LaTeX paper and a local codebase, **zkml-inspector** dispatches specialized sub-agents to find:
 
 - **Soundness Violations** — Missing constraints, uncommitted weights, unconstrained wires, layer-skip attacks
 - **ZKP Lifecycle Gaps** — Incomplete setup/commitment, proving, or verification phases
-- **Performance Bottlenecks** — High-cost gates, unoptimized "Transformer Killer" operations (Softmax, LayerNorm, GELU)
 - **Precision Mismatches** — Fixed-point scaling errors between paper assumptions and code reality
 
 ## Installation
 
 ### Prerequisites
 - VS Code with GitHub Copilot
-- Python 3.10+
 
 ### Setup
 
@@ -23,13 +21,7 @@ Given a PDF/LaTeX paper and a local codebase, **zkml-inspector** dispatches spec
    git clone https://github.com/zkml-inspector/zkml-inspector.git
    ```
 
-2. Install Python dependencies:
-
-   ```bash
-   pip install -r .github/skills/analyze-zkml-gap/scripts/requirements.txt
-   ```
-
-3. The agents are automatically discovered by VS Code Copilot from the `.github/` directory.
+2. The agents are automatically discovered by VS Code Copilot from the `.github/` directory. No runtime dependencies required.
 
 ## Usage
 
@@ -53,24 +45,12 @@ Or use the prompt shortcut:
 /analyze-quick paper=./paper.pdf codebase=./src/
 ```
 
-### Soundness Audit (code only, no paper)
-
-```
-/audit-soundness codebase=./src/
-```
-
-### Code Inspection (structure overview)
-
-```
-/inspect-code codebase=./src/
-```
-
 ### Supported Inputs
 
 | Input      | Formats                     |
 |------------|-----------------------------|
 | Paper      | PDF (`.pdf`), LaTeX (`.tex`) |
-| Codebase   | Rust (Halo2, EZKL), Python (EZKL), Circom, C++ |
+| Codebase   | Any language (Rust, Python, Circom, C++, etc.) |
 
 > **Note**: LaTeX (`.tex`) input produces significantly better results than PDF.
 > PDF parsing relies on text extraction which is inherently lossy — mathematical
@@ -79,26 +59,25 @@ Or use the prompt shortcut:
 
 ## Architecture
 
-The system uses an **orchestrator + 4 sub-agents** pattern:
+The system uses an **orchestrator + 3 sub-agents** pattern with a strictly sequential pipeline:
 
 ```
 zkml-inspector (orchestrator)
-  ├── paper-analyst     — Extracts claims from research papers with ZKP understanding
-  ├── code-inspector    — Maps codebase to the commit/prove/verify lifecycle
-  ├── zkp-auditor       — Core soundness reasoning, precision & cost analysis, can ask follow-ups to agents 1 & 2
-  └── report-writer     — Assembles all findings into final Markdown report
+  ├── paper-analyst     — Extracts verification checklist from research papers
+  ├── code-inspector    — Audits codebase against the paper manifest
+  └── report-writer     — Assembles findings into final Markdown report
 ```
-
-All analysis agents share a common ZKP knowledge foundation
-(`references/zkp_foundations.md`) covering the commit → prove → verify lifecycle.
 
 ### Pipeline Flow
 
 ```
-1. paper-analyst + code-inspector  (parallel — independent extraction)
-2. zkp-auditor                     (cross-references both, can ask follow-ups, runs precision & cost analysis)
-3. report-writer                   (assembles final Markdown report)
+1. paper-analyst   (extracts paper manifest: operators, commitment obligations, constraints)
+2. code-inspector  (audits codebase against paper manifest, produces findings)
+3. report-writer   (assembles findings into deduplicated Markdown report)
 ```
+
+Each agent's output feeds the next. All analysis agents share a common ZKP knowledge
+foundation (`references/zkp_foundations.md`) covering the commit → prove → verify lifecycle.
 
 ### File Structure
 
@@ -107,38 +86,15 @@ All analysis agents share a common ZKP knowledge foundation
 ├── agents/
 │   ├── zkml-inspector.agent.md   # Orchestrator
 │   ├── paper-analyst.agent.md    # Paper extraction sub-agent
-│   ├── code-inspector.agent.md   # Code inspection sub-agent
-│   ├── zkp-auditor.agent.md      # Soundness auditor + precision/cost sub-agent
+│   ├── code-inspector.agent.md   # Code audit sub-agent
 │   └── report-writer.agent.md    # Report generation sub-agent
 ├── prompts/
 │   ├── analyze-full.prompt.md    # Full paper vs. code analysis
-│   ├── analyze-quick.prompt.md   # Quick scan for critical issues
-│   ├── audit-soundness.prompt.md # Code-only soundness audit
-│   └── inspect-code.prompt.md    # Code-only inspection
+│   └── analyze-quick.prompt.md   # Quick scan for critical issues
 └── skills/analyze-zkml-gap/
     ├── SKILL.md                  # Shared library documentation
-    ├── scripts/                  # Python analysis scripts
-    ├── references/               # ZKP knowledge base (foundations, operators, etc.)
-    └── assets/                   # Report templates
+    └── references/               # ZKP knowledge base (foundations, operators, etc.)
 ```
-
-## Supported Frameworks
-
-| Framework | Detection                | Support Level |
-|-----------|--------------------------|---------------|
-| EZKL      | `ezkl` config files      | Full          |
-| Halo2     | `Cargo.toml` + halo2 dep | Full          |
-| Circom    | `.circom` files          | Partial       |
-| Python    | `setup.py`/`pyproject.toml` | Partial    |
-| C++       | CMakeLists.txt           | Basic         |
-
-## Recommended MCP Servers
-
-For enhanced functionality, configure these MCP servers:
-
-- **`@anthropic/mcp-server-fetch`** — Download papers from arXiv/IACR URLs
-- **`github-mcp-server`** — Fetch reference implementations from GitHub
-- **`@modelcontextprotocol/server-filesystem`** — Secure file access scoping
 
 ## License
 

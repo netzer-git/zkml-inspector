@@ -25,9 +25,8 @@ f(x) with a linear function: `f(x) ≈ αᵢ·x + βᵢ` where i is the segment 
 - Total: ~(2N + 20) gates per invocation
 
 ### Known Issues
-- **EZKL**: Uses piecewise-linear for Sigmoid/Tanh with configurable segments. Default is often too few segments.
-- **Input range violation**: If input falls outside [a, b], result is clamped — this can cause silent accuracy degradation.
-- **Continuity**: Segments may not join smoothly at boundaries → discontinuous gradients (doesn't affect inference but can cause numerical instability).
+- Input outside [a,b] is clamped silently — can produce incorrect outputs
+- Segment boundaries may be discontinuous — introduces artifacts at breakpoints
 
 ---
 
@@ -48,9 +47,8 @@ $$f(x) \approx \sum_{k=0}^{d} \frac{f^{(k)}(c)}{k!}(x-c)^k$$
 - Total: ~(2d + 5) gates
 
 ### Known Issues
-- **Range limitation**: Taylor series converges slowly far from center — poor for wide-range inputs
-- **Fixed-point overflow**: High-degree terms (x^d) can overflow fixed-point representation
-- **Not used alone**: Usually combined with range reduction (see Hybrid approaches)
+- Poor accuracy far from center; error explodes for wide-range inputs
+- High-degree terms overflow fixed-point; usually combined with range reduction
 
 ---
 
@@ -70,8 +68,8 @@ $$f(x) \approx \sum_{k=0}^{d} c_k T_k\left(\frac{2x - a - b}{b - a}\right)$$
 - But typically needs lower degree than Taylor for same accuracy
 
 ### Known Issues
-- **Coefficients are irrational**: Fixed-point representation of Chebyshev coefficients introduces quantization error
-- **Recurrence relation**: Computing T_k(x) via recurrence may accumulate error in fixed-point
+- Irrational coefficients introduce fixed-point quantization error
+- Recurrence relation may accumulate error in fixed-point
 
 ---
 
@@ -87,15 +85,13 @@ Circuit verifies: "the output value was indeed looked up from the table."
 - **With 16-bit input**: 65536 entries — large but feasible
 
 ### Gate Cost
-- **Per lookup**: 1 lookup gate (~50 constraints in Halo2/Plonk with lookup arguments)
+- **Per lookup**: 1 lookup gate (~50 constraints with lookup arguments)
 - **Table setup**: One-time cost proportional to table size
 - **Total per invocation**: ~50 gates (very cheap!)
 
 ### Known Issues
-- **Table size explosion**: For multi-input functions (e.g., x·sigmoid(x) for SiLU), table size grows exponentially
-- **Range limitation**: Input outside table range is undefined — must be caught with a range check
-- **EZKL**: Supports lookup tables via `--bits` flag for activation functions
-- **Halo2**: Native lookup argument support; table must be committed as fixed columns
+- Multi-input functions cause exponential table size growth
+- Input outside table range is undefined — needs preceding range check
 
 ---
 
@@ -123,9 +119,9 @@ Combine range reduction with a core approximation:
 - Total: typically 500-2000 gates — good balance of accuracy and cost
 
 ### Known Issues
-- **Integer arithmetic in range reduction**: The n·ln2 decomposition requires integer floor/ceil
-- **Edge cases**: 0, -∞, +∞, NaN handling — paper may not address these
-- **Fixed-point overflow during reconstruction**: 2^n may overflow for large n
+- Integer floor/ceil needed for range decomposition
+- Edge cases (0, ±∞, NaN) often unaddressed in papers
+- Reconstruction step (e.g. 2^n) may overflow fixed-point
 
 ---
 
@@ -146,9 +142,9 @@ Iteratively refine an estimate of 1/x or 1/√x:
 - Total for 1/√x with 3 iterations: ~150 gates
 
 ### Known Issues
-- **Initial guess quality**: Poor initial guess → more iterations → more gates
-- **Division by zero**: Not caught unless explicit range check added
-- **Used in LayerNorm**: The 1/√(σ²+ε) term — commonly approximated with Newton's method
+- Poor initial guess requires more iterations and gates
+- Division by zero not caught without explicit range check
+- Commonly used in LayerNorm for 1/√(σ²+ε)
 
 ---
 
