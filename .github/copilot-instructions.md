@@ -6,6 +6,8 @@ zkml-inspector is a multi-agent VS Code Copilot system that analyzes gaps betwee
 
 No runtime dependencies — the agent pipeline uses built-in LLM capabilities. Reference data is stored in Markdown under `.github/skills/analyze-zkml-gap/references/`.
 
+PDF reading requires the `pdf-reader` MCP server (configured in `.vscode/mcp.json`). It uses `npx @sylphx/pdf-reader-mcp` — Node.js must be available.
+
 ## Architecture: Orchestrator + 3 Sub-Agents
 
 ```
@@ -22,7 +24,7 @@ Pipeline: `paper-analyst → code-inspector → report-writer` (strictly sequent
 | Agent | Responsibility | Tools | Inputs | Output |
 |-------|---------------|-------|--------|--------|
 | **zkml-inspector** | Orchestrates sequential pipeline, validates inputs, saves report to disk | read, search, agent, todo, web | Paper path + codebase path | Final report file |
-| **paper-analyst** | Extracts verification checklist from paper: commitment obligations, operator specs, constraints, precision requirements, protocol rounds | read, search | Paper file path (.pdf/.tex only) | Paper manifest JSON |
+| **paper-analyst** | Extracts verification checklist from paper: commitment obligations, operator specs, constraints, precision requirements, protocol rounds | read, search, mcp::pdf-reader::read_pdf | Paper file path (.pdf/.tex only) | Paper manifest JSON |
 | **code-inspector** | Audits codebase against paper manifest: commitment verification, operator coverage, soundness checks, protocol transcript audit, precision validation | read, search | Paper manifest + codebase path | Audit findings JSON |
 | **report-writer** | Assembles findings into deduplicated Markdown report with severity ordering | read | Paper manifest + audit findings | Markdown report |
 

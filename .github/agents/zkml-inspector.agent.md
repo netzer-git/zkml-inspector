@@ -12,6 +12,7 @@ tools:
   - agent
   - todo
   - web
+  - pdf-reader/read_pdf
 agents:
   - paper-analyst
   - code-inspector
@@ -53,6 +54,8 @@ Both a paper path AND a codebase path are MANDATORY.
 - Confirm the user provided an explicit paper file path (`.pdf` or `.tex`)
 - The paper path must point to a file, NOT a directory
 - If no paper file is provided, **ASK for it** — do not proceed without one
+- PDF files are supported — the paper-analyst has access to the `read_pdf` MCP
+  tool from the `pdf-reader` server for text extraction
 
 **Codebase path validation:**
 - Confirm the codebase path exists and is a directory

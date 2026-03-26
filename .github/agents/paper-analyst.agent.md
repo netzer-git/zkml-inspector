@@ -6,7 +6,7 @@ description: >-
   constraints, approximation strategies, and soundness claims.
   Triggers: "parse paper", "extract operators", "what does the paper
   claim", "paper analysis".
-tools: [read, search]
+tools: [read, search, "mcp::pdf-reader::read_pdf"]
 user-invocable: false
 ---
 
@@ -66,6 +66,20 @@ obligation, every constraint, every precision requirement.
 
 Confirm the paper file exists and has extension `.pdf` or `.tex`. If not, return
 the `NO_PAPER_PROVIDED` error above. Do NOT proceed to any other step.
+
+**If the file is a `.pdf`**, use the `read_pdf` MCP tool to extract its text:
+```json
+{
+  "sources": [{ "path": "<absolute_path_to_pdf>" }],
+  "include_full_text": true,
+  "include_metadata": true,
+  "include_page_count": true
+}
+```
+Use the extracted text for all subsequent analysis steps. Do NOT attempt to read
+a PDF with the standard `read` tool — it will return binary gibberish.
+
+**If the file is a `.tex`**, read it directly with the standard `read` tool.
 
 ### Step 1: Deep reading with ZKP lens
 
