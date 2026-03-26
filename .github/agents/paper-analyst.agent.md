@@ -94,6 +94,21 @@ For each committed value, specify:
 - Where the paper specifies this (section/equation)
 - What severity if missing (CRITICAL for soundness-breaking, WARNING otherwise)
 
+**Decompose every commitment method into ALL its constituent parts.**
+Naming the method is not enough — the code-inspector needs to know every
+individual value that must be committed for the method to be sound. Walk
+through the algorithm step-by-step and list each part separately.
+
+Example: if the paper commits model weights via a Poseidon Merkle tree, you
+must separately list: (1) the leaf values (per-layer weight matrices),
+(2) the Merkle root (exposed as a public input), (3) Merkle authentication
+paths (provided by prover, verified in-circuit). If a KZG commitment is
+used for a polynomial, list: (1) the polynomial coefficients being committed,
+(2) the SRS/setup parameters, (3) the evaluation point and claimed value,
+(4) the opening proof. Every part that the algorithm needs becomes its own
+entry in `commitment_obligations` — if any part is missing in the code, the
+scheme is broken.
+
 **You MUST flag ALL of the following if the paper mentions them, even implicitly:**
 - All weight matrices (per-layer)
 - All bias vectors (per-layer) — commonly omitted but always needed
@@ -127,6 +142,10 @@ For EVERY mathematical operation:
 6. What error bound applies? Is it proven or empirical?
 7. What precision is required for this operator?
 8. What values must be committed for this operator to be sound?
+   **List every value individually** — these must correspond to entries in
+   `commitment_obligations`. If a value is needed but not in the obligations
+   list, add it. The code-inspector will cross-check these against the
+   obligations to verify nothing is missing.
 
 **E. Quantization & Precision**
 - Bit-width, scale factor, quantization scheme

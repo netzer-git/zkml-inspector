@@ -91,6 +91,11 @@ For each operator:
    operator's input (same wire/variable)?
 5. For approximations: verify segments/degree, input range, and error bound
    match the paper's specification
+6. **Cross-check committed values**: For each value in the operator's
+   `committed_values` list, verify it has a matching entry in
+   `commitment_obligations` AND that the code actually commits it.
+   A committed_value with no corresponding commitment in the code means
+   the operator is unsound — the prover can substitute that value freely.
 
 For operators found in code but NOT in the paper manifest: note as
 `UNDOCUMENTED` (INFO).
