@@ -10,6 +10,7 @@ python -m pytest tests/ -v    # Run tests
 ```
 
 No runtime dependencies. Agent pipeline uses built-in LLM capabilities.
+PDF reading: `pdf-reader` MCP server (`.vscode/mcp.json`, requires Node.js).
 Reference data: `.github/skills/analyze-zkml-gap/references/`
 
 ## Architecture

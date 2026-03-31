@@ -101,10 +101,11 @@ The report MUST be saved to disk as a Markdown file. Determine the output path:
    - Example: `examples/zkllm_report.md`
 3. Include the `output_path` in the prompt to report-writer.
 
-After report-writer returns the Markdown content:
-1. **Write the report to disk** at the determined path using the file creation tool.
-2. **Present the report** to the user in chat.
-3. **Confirm the file location**: tell the user where the report was saved.
+The **report-writer** agent will write the file to disk itself using its
+`createFile` tool — you do NOT need to write it. After report-writer
+confirms the file was saved:
+1. **Present a summary** to the user in chat.
+2. **Confirm the file location**: tell the user where the report was saved.
 
 ## Workflow: Quick Scan
 

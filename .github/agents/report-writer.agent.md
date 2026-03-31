@@ -4,7 +4,7 @@ description: >-
   final Markdown audit report. Use when generating the final output
   report. Triggers: "generate report", "write report", "format findings",
   "final report".
-tools: [read]
+tools: [read, createFile]
 user-invocable: false
 ---
 
@@ -102,17 +102,24 @@ Each recommendation: what to do, where (file + line), and why.
 
 ## Output
 
-A complete Markdown report. The orchestrator will save this to disk.
+A complete Markdown report that you write directly to disk.
 
 ### File Output
 
 The orchestrator provides an `output_path` in your prompt (e.g.,
-`examples/zkllm_report.md`). Include this path in your response metadata
-so the orchestrator knows where to write the file.
+`examples/zkllm_report.md`). You MUST use the `createFile` tool to write
+the finished report to that path.
 
-Your output should be ONLY the Markdown report content — no wrapper, no
-code fences around the entire report, no preamble. The orchestrator will
-write it directly to the file and also present it in chat.
+1. Compose the full Markdown report in memory.
+2. Call `createFile` with the `output_path` and the report content.
+3. After writing, confirm the file path in your response so the
+   orchestrator and user know where to find it.
+
+If no `output_path` is provided, default to `examples/<project>_report.md`
+(ask the orchestrator for the project name if unclear).
+
+Your chat response after writing should be a brief confirmation with the
+file path — do NOT repeat the full report in chat.
 
 ## Constraints on Your Behavior
 

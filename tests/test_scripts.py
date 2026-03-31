@@ -326,7 +326,7 @@ class TestAgentContent:
     def test_orchestrator_has_report_file_output(self) -> None:
         """Orchestrator must instruct saving the report to disk."""
         text = (AGENTS_DIR / "zkml-inspector.agent.md").read_text(encoding="utf-8")
-        assert "Write the report to disk" in text, (
+        assert "write the file to disk" in text, (
             "Orchestrator should instruct writing the report to a file"
         )
 

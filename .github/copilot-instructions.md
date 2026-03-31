@@ -23,10 +23,10 @@ Pipeline: `paper-analyst → code-inspector → report-writer` (strictly sequent
 
 | Agent | Responsibility | Tools | Inputs | Output |
 |-------|---------------|-------|--------|--------|
-| **zkml-inspector** | Orchestrates sequential pipeline, validates inputs, saves report to disk | read, search, agent, todo, web | Paper path + codebase path | Final report file |
+| **zkml-inspector** | Orchestrates sequential pipeline, validates inputs, dispatches sub-agents | read, search, agent, todo, web | Paper path + codebase path | Final report file |
 | **paper-analyst** | Extracts verification checklist from paper: commitment obligations, operator specs, constraints, precision requirements, protocol rounds | read, search, mcp::pdf-reader::read_pdf | Paper file path (.pdf/.tex only) | Paper manifest JSON |
 | **code-inspector** | Audits codebase against paper manifest: commitment verification, operator coverage, soundness checks, protocol transcript audit, precision validation | read, search | Paper manifest + codebase path | Audit findings JSON |
-| **report-writer** | Assembles findings into deduplicated Markdown report with severity ordering | read | Paper manifest + audit findings | Markdown report |
+| **report-writer** | Assembles findings into deduplicated Markdown report with severity ordering, writes report file to disk | read, createFile | Paper manifest + audit findings + output_path | Markdown report file |
 
 ### Key Design Constraints
 - Pipeline is **strictly sequential** — each agent's output feeds the next
