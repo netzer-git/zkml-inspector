@@ -1,0 +1,15 @@
+{
+  "analyses": [
+    {
+      "name": "ezkl",
+      "paper": "./projects/ezkl/paper.pdf",
+      "codebase": "./projects/ezkl/code/"
+    },
+    {
+      "name": "zkllm",
+      "paper": "./projects/zkllm/paper.tex",
+      "codebase": "./projects/zkllm/src/"
+    }
+  ],
+  "output_dir": "./reports/v0.1"
+}

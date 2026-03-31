@@ -35,11 +35,13 @@ EXPECTED_AGENTS = [
     "paper-analyst.agent.md",
     "code-inspector.agent.md",
     "report-writer.agent.md",
+    "batch-runner.agent.md",
 ]
 
 EXPECTED_PROMPTS = [
     "analyze-full.prompt.md",
     "analyze-quick.prompt.md",
+    "analyze-batch.prompt.md",
 ]
 
 EXPECTED_REFERENCES = [
@@ -424,9 +426,91 @@ class TestCrossConsistency:
                 assert (REFERENCES_DIR / ref).is_file()
 
     def test_prompts_reference_orchestrator(self) -> None:
-        """All prompt files should use the zkml-inspector agent."""
+        """Prompt files should use their respective agent."""
+        agent_map = {
+            "analyze-full.prompt.md": "zkml-inspector",
+            "analyze-quick.prompt.md": "zkml-inspector",
+            "analyze-batch.prompt.md": "batch-runner",
+        }
         for filename in EXPECTED_PROMPTS:
             fm = _extract_frontmatter(PROMPTS_DIR / filename)
-            assert "zkml-inspector" in fm, (
-                f"{filename} should reference the zkml-inspector agent"
+            expected_agent = agent_map[filename]
+            assert expected_agent in fm, (
+                f"{filename} should reference the {expected_agent} agent"
             )
+
+
+# ============================================================================
+# Batch runner tests
+# ============================================================================
+
+class TestBatchRunner:
+    """Validate batch-runner agent configuration."""
+
+    def test_batch_runner_has_zkml_inspector_agent(self) -> None:
+        """batch-runner must list zkml-inspector as its sub-agent."""
+        fm = _extract_frontmatter(AGENTS_DIR / "batch-runner.agent.md")
+        assert "zkml-inspector" in fm, (
+            "batch-runner should list zkml-inspector in its agents"
+        )
+
+    def test_batch_runner_is_user_invocable(self) -> None:
+        """batch-runner should be user-invocable (no user-invocable: false)."""
+        fm = _extract_frontmatter(AGENTS_DIR / "batch-runner.agent.md")
+        assert "user-invocable: false" not in fm, (
+            "batch-runner should be user-invocable"
+        )
+
+    def test_batch_runner_has_resume_logic(self) -> None:
+        """batch-runner must describe resume behavior."""
+        text = (AGENTS_DIR / "batch-runner.agent.md").read_text(encoding="utf-8")
+        assert "resume" in text.lower() or "Resume" in text, (
+            "batch-runner should describe resume behavior"
+        )
+
+    def test_batch_runner_has_timestamped_folder(self) -> None:
+        """batch-runner must create timestamped output folders."""
+        text = (AGENTS_DIR / "batch-runner.agent.md").read_text(encoding="utf-8")
+        assert "YYYYMMDD" in text or "timestamp" in text.lower(), (
+            "batch-runner should create timestamped output folders"
+        )
+
+    def test_batch_runner_saves_outside_workspace(self) -> None:
+        """batch-runner must save reports outside the zkml-inspector workspace."""
+        text = (AGENTS_DIR / "batch-runner.agent.md").read_text(encoding="utf-8")
+        assert "next to the manifest" in text.lower() or "NOT inside the zkml-inspector" in text, (
+            "batch-runner should save reports outside the zkml-inspector workspace"
+        )
+
+    def test_batch_runner_delegates_to_zkml_inspector(self) -> None:
+        """batch-runner must delegate analysis to zkml-inspector, not do it itself."""
+        text = (AGENTS_DIR / "batch-runner.agent.md").read_text(encoding="utf-8")
+        assert "DO NOT" in text and "analysis yourself" in text.lower(), (
+            "batch-runner should explicitly delegate to zkml-inspector"
+        )
+
+
+class TestBatchManifest:
+    """Validate the example batch manifest template."""
+
+    def test_manifest_exists(self) -> None:
+        path = ROOT / "examples" / "batch_manifest.json"
+        assert path.is_file(), f"Missing manifest template: {path}"
+
+    def test_manifest_is_valid_json(self) -> None:
+        import json
+        path = ROOT / "examples" / "batch_manifest.json"
+        text = path.read_text(encoding="utf-8")
+        data = json.loads(text)
+        assert "analyses" in data, "Manifest must have 'analyses' key"
+        assert isinstance(data["analyses"], list), "'analyses' must be an array"
+        assert len(data["analyses"]) > 0, "'analyses' must be non-empty"
+
+    def test_manifest_entries_have_required_fields(self) -> None:
+        import json
+        path = ROOT / "examples" / "batch_manifest.json"
+        data = json.loads(path.read_text(encoding="utf-8"))
+        for entry in data["analyses"]:
+            assert "name" in entry, "Each entry must have 'name'"
+            assert "paper" in entry, "Each entry must have 'paper'"
+            assert "codebase" in entry, "Each entry must have 'codebase'"

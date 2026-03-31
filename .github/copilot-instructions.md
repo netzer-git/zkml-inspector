@@ -8,13 +8,15 @@ No runtime dependencies — the agent pipeline uses built-in LLM capabilities. R
 
 PDF reading requires the `pdf-reader` MCP server (configured in `.vscode/mcp.json`). It uses `npx @sylphx/pdf-reader-mcp` — Node.js must be available.
 
-## Architecture: Orchestrator + 3 Sub-Agents
+## Architecture: Orchestrator + 3 Sub-Agents + Batch Runner
 
 ```
-zkml-inspector (orchestrator)          .github/agents/zkml-inspector.agent.md
-  ├── paper-analyst     (step 1)       .github/agents/paper-analyst.agent.md
-  ├── code-inspector    (step 2)       .github/agents/code-inspector.agent.md
-  └── report-writer     (step 3)       .github/agents/report-writer.agent.md
+batch-runner (batch orchestrator)              .github/agents/batch-runner.agent.md
+  └── invokes per entry:
+        zkml-inspector (orchestrator)          .github/agents/zkml-inspector.agent.md
+          ├── paper-analyst     (step 1)       .github/agents/paper-analyst.agent.md
+          ├── code-inspector    (step 2)       .github/agents/code-inspector.agent.md
+          └── report-writer     (step 3)       .github/agents/report-writer.agent.md
 ```
 
 Pipeline: `paper-analyst → code-inspector → report-writer` (strictly sequential)
@@ -23,10 +25,11 @@ Pipeline: `paper-analyst → code-inspector → report-writer` (strictly sequent
 
 | Agent | Responsibility | Tools | Inputs | Output |
 |-------|---------------|-------|--------|--------|
-| **zkml-inspector** | Orchestrates sequential pipeline, validates inputs, dispatches sub-agents | read, search, agent, todo, web | Paper path + codebase path | Final report file |
+| **zkml-inspector** | Orchestrates sequential pipeline, validates inputs, dispatches sub-agents | read, search, agent, todo, web, createFile | Paper path + codebase path | Final report file |
 | **paper-analyst** | Extracts verification checklist from paper: commitment obligations, operator specs, constraints, precision requirements, protocol rounds | read, search, mcp::pdf-reader::read_pdf | Paper file path (.pdf/.tex only) | Paper manifest JSON |
 | **code-inspector** | Audits codebase against paper manifest: commitment verification, operator coverage, soundness checks, protocol transcript audit, precision validation | read, search | Paper manifest + codebase path | Audit findings JSON |
 | **report-writer** | Assembles findings into deduplicated Markdown report with severity ordering, writes report file to disk | read, createFile | Paper manifest + audit findings + output_path | Markdown report file |
+| **batch-runner** | Processes multiple paper+codebase pairs from a JSON manifest, invokes zkml-inspector per entry with isolated context | read, search, agent, todo, edit, createFile | Manifest JSON path | Timestamped folder of reports |
 
 ### Key Design Constraints
 - Pipeline is **strictly sequential** — each agent's output feeds the next
@@ -35,6 +38,7 @@ Pipeline: `paper-analyst → code-inspector → report-writer` (strictly sequent
 - code-inspector produces **audit findings** (not a code manifest) — each finding ties back to a paper claim
 - report-writer **deduplicates** findings with shared root causes
 - All sub-agents are `user-invocable: false`
+- batch-runner saves reports **next to the manifest file** (not in the zkml-inspector workspace) to prevent code-inspector search contamination
 
 ### Workflows
 
@@ -42,6 +46,7 @@ Pipeline: `paper-analyst → code-inspector → report-writer` (strictly sequent
 |--------|------|-------------|
 | `/analyze-full` | Paper + codebase comparison | All 3 agents |
 | `/analyze-quick` | Critical issues only | All 3 (code-inspector filters to CRITICAL) |
+| `/analyze-batch` | Multiple papers + codebases from manifest | batch-runner → zkml-inspector → all 3 agents (per entry) |
 
 ## Build & Test
 

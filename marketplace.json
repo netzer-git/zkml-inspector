@@ -36,6 +36,10 @@
     {
       "name": "report-writer",
       "path": ".github/agents/report-writer.agent.md"
+    },
+    {
+      "name": "batch-runner",
+      "path": ".github/agents/batch-runner.agent.md"
     }
   ],
   "prompts": [
@@ -46,6 +50,10 @@
     {
       "name": "analyze-quick",
       "path": ".github/prompts/analyze-quick.prompt.md"
+    },
+    {
+      "name": "analyze-batch",
+      "path": ".github/prompts/analyze-batch.prompt.md"
     }
   ],
   "tags": [
