@@ -39,7 +39,6 @@ EXPECTED_AGENTS = [
 
 EXPECTED_PROMPTS = [
     "analyze-full.prompt.md",
-    "analyze-quick.prompt.md",
     "analyze-batch.prompt.md",
 ]
 

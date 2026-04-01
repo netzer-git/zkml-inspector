@@ -39,12 +39,6 @@ Or use the prompt shortcut:
 /analyze-full paper=./paper.tex codebase=./src/
 ```
 
-### Quick Scan (critical issues only)
-
-```
-/analyze-quick paper=./paper.pdf codebase=./src/
-```
-
 ### Batch Analysis (multiple papers)
 
 Process multiple paper+codebase pairs from a JSON manifest:
@@ -120,7 +114,6 @@ foundation (`references/zkp_foundations.md`) covering the commit → prove → v
 │   └── report-writer.agent.md    # Report generation sub-agent
 ├── prompts/
 │   ├── analyze-full.prompt.md    # Full paper vs. code analysis
-│   ├── analyze-quick.prompt.md   # Quick scan for critical issues
 │   └── analyze-batch.prompt.md   # Batch analysis from manifest
 └── skills/analyze-zkml-gap/
     ├── SKILL.md                  # Shared library documentation

@@ -42,7 +42,6 @@ Pipeline: `paper-analyst → code-inspector → report-writer` (strictly sequent
 | Prompt | When | Agents Used |
 |--------|------|-------------|
 | `/analyze-full` | Paper + codebase comparison | All 3 agents |
-| `/analyze-quick` | Critical issues only | All 3 (code-inspector filters to CRITICAL) |
 | `/analyze-batch` | Multiple papers + codebases from manifest | zkml-inspector → all 3 agents (per entry), then summary JSON |
 
 ## Build & Test
