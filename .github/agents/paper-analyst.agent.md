@@ -6,7 +6,7 @@ description: >-
   constraints, approximation strategies, and soundness claims.
   Triggers: "parse paper", "extract operators", "what does the paper
   claim", "paper analysis".
-tools: [read, search, "mcp::pdf-reader::read_pdf"]
+tools: [read, search, "pdf-reader/read_pdf"]
 user-invocable: false
 ---
 
