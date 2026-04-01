@@ -35,7 +35,6 @@ EXPECTED_AGENTS = [
     "paper-analyst.agent.md",
     "code-inspector.agent.md",
     "report-writer.agent.md",
-    "batch-runner.agent.md",
 ]
 
 EXPECTED_PROMPTS = [

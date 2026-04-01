@@ -23,8 +23,6 @@ Given a PDF/LaTeX paper and a local codebase, **zkml-inspector** dispatches spec
 
 2. The agents are automatically discovered by VS Code Copilot from the `.github/` directory. No runtime dependencies required.
 
-3. Running `batch-runner` agent on github copilot requires `chat.subagents.allowInvocationsFromSubagents` setting set to `true`.
-
 ## Usage
 
 ### Full Analysis (paper + code)
@@ -71,7 +69,7 @@ Create a `batch_manifest.json` (see `examples/batch_manifest.json`):
   If omitted, auto-creates `<manifest_dir>/reports/run_<YYYYMMDD_HHMMSS>/`.
 
 **Resume support**: If interrupted, re-invoke `/analyze-batch` in a fresh
-conversation with the same manifest. It detects the incomplete run folder and
+conversation with the same manifest. It detects existing reports and
 skips already-completed analyses.
 
 > **Tip**: Use a multi-root VS Code workspace containing both the zkml-inspector
@@ -94,12 +92,10 @@ skips already-completed analyses.
 The system uses an **orchestrator + 3 sub-agents** pattern with a strictly sequential pipeline:
 
 ```
-batch-runner (batch orchestrator)
-  └── invokes per entry:
-        zkml-inspector (orchestrator)
-          ├── paper-analyst     — Extracts verification checklist from research papers
-          ├── code-inspector    — Audits codebase against the paper manifest
-          └── report-writer     — Assembles findings into final Markdown report
+zkml-inspector (orchestrator)
+  ├── paper-analyst     — Extracts verification checklist from research papers
+  ├── code-inspector    — Audits codebase against the paper manifest
+  └── report-writer     — Assembles findings into final Markdown report
 ```
 
 ### Pipeline Flow
@@ -121,8 +117,7 @@ foundation (`references/zkp_foundations.md`) covering the commit → prove → v
 │   ├── zkml-inspector.agent.md   # Orchestrator
 │   ├── paper-analyst.agent.md    # Paper extraction sub-agent
 │   ├── code-inspector.agent.md   # Code audit sub-agent
-│   ├── report-writer.agent.md    # Report generation sub-agent
-│   └── batch-runner.agent.md     # Batch analysis orchestrator
+│   └── report-writer.agent.md    # Report generation sub-agent
 ├── prompts/
 │   ├── analyze-full.prompt.md    # Full paper vs. code analysis
 │   ├── analyze-quick.prompt.md   # Quick scan for critical issues

@@ -36,10 +36,6 @@
     {
       "name": "report-writer",
       "path": ".github/agents/report-writer.agent.md"
-    },
-    {
-      "name": "batch-runner",
-      "path": ".github/agents/batch-runner.agent.md"
     }
   ],
   "prompts": [
