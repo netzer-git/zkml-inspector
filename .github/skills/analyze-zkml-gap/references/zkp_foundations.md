@@ -178,7 +178,7 @@ For EVERY interactive sub-protocol in the paper or code:
 
 | Pattern | Example | Impact |
 |---------|---------|--------|
-| Sumcheck polynomial not recorded | Prover sends polynomial evaluations but they're not hashed into Fiat-Shamir transcript | Prover can adaptively choose polynomials that satisfy the check |
+| Sumcheck polynomial not recorded | Prover sends polynomial evaluations but they're not committed correctly | Prover can adaptively choose polynomials that satisfy the check |
 | Opening proof skipped | Commitment exists but its opening at the evaluation point is never verified | Prover can commit to one value and open to another |
 | Challenge reuse | Same challenge used across independent sub-protocols without domain separation | Cross-protocol attack: prover correlates responses |
 

@@ -129,7 +129,7 @@ Using the paper manifest's `protocol_rounds` and the code's prove functions:
 2. Identify prover-computed values and verifier challenges
 3. Verify: is each prover value committed BEFORE its associated challenge?
 4. Verify: does each commitment have a verified opening?
-5. If Fiat-Shamir: verify every prover message is hashed into the transcript (Note: Only WARN if the paper focuses on "could support" Fiat-Shamir and simplicity, unless theoretically impossible).
+5. If Fiat-Shamir: verify every prover message is hashed into the transcript. If the paper focuses on "could support" Fiat-Shamir and simplicity, only WARN unless theoretically impossible.
 6. Check for challenge reuse across sub-protocols (needs domain separation)
 
 ### Phase 6: Precision Audit
