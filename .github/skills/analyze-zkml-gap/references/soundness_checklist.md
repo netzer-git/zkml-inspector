@@ -98,8 +98,8 @@ against a paper manifest.
 
 ### CHECK-5.2: Fiat-Shamir includes all prover messages
 - **What**: Every prover message must be hashed into the transcript before
-  deriving the next challenge
-- **Severity**: CRITICAL
+  deriving the next challenge. Note: Many papers focus on "could support Fiat-Shamir" rather than full implementation.
+- **Severity**: WARNING (unless there is a fundamental theoretical issue preventing Fiat-Shamir support)
 
 ### CHECK-5.3: No challenge reuse across sub-protocols
 - **What**: Each sub-protocol must use fresh challenges with domain separation
@@ -142,3 +142,10 @@ against a paper manifest.
 | CRITICAL | Breaks soundness or ZK — proof is invalid | Must fix before deployment |
 | WARNING  | May affect accuracy or security in edge cases | Should fix; document exceptions |
 | INFO     | Best practice, not a security issue | Recommended improvement |
+
+---
+
+### Severity Override Rules
+- **Fiat-Shamir**: If a paper only claims it "could support Fiat-Shamir", flag missing Fiat-Shamir parts as **WARNING**, unless there's a theoretical roadblock.
+- **Omitted Operator Proofs**: If the paper omits proofs for operators not in its main focus, flag their absence as **WARNING**.
+- **Experimental Omissions**: If the codebase explicitly comments an implementation detail as "not-needed" or "omitted for the sake of the experiment", flag it as **WARNING**.

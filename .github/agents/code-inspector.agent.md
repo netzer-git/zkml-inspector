@@ -75,7 +75,7 @@ Walk through each entry in the paper manifest's `operators`:
 For each operator:
 1. **Find it** in the codebase — search for the operation name, the math
    pattern, or related function names
-2. If NOT found → finding: `MISSING` (CRITICAL)
+2. If NOT found → finding: `MISSING`. **Severity Note**: Mark as CRITICAL by default. Downgrade to WARNING if the paper omitted it because it's not the main focus, or if the code explicitly comments it as not-needed/omitted for the experiment.
 3. If found, **read the implementation** (not just the function signature):
    a. What type is it? (exact, approximation, lookup)
    b. Does the type match what the paper specifies?
@@ -129,7 +129,7 @@ Using the paper manifest's `protocol_rounds` and the code's prove functions:
 2. Identify prover-computed values and verifier challenges
 3. Verify: is each prover value committed BEFORE its associated challenge?
 4. Verify: does each commitment have a verified opening?
-5. If Fiat-Shamir: verify every prover message is hashed into the transcript
+5. If Fiat-Shamir: verify every prover message is hashed into the transcript (Note: Only WARN if the paper focuses on "could support" Fiat-Shamir and simplicity, unless theoretically impossible).
 6. Check for challenge reuse across sub-protocols (needs domain separation)
 
 ### Phase 6: Precision Audit
@@ -235,6 +235,7 @@ Return a structured audit report:
   report the function name. The implementation details matter.
 - NEVER downplay a soundness issue. If a constraint is missing, it's CRITICAL.
 - ALWAYS distinguish "paper says X" from "code does Y" — never conflate them.
+- Downgrade missing features from CRITICAL to WARNING if explicitly commented as "not-needed" or "omitted for the sake of the experiment" by authors, unless they are central to the paper's claims.
 - When in doubt between WARNING and CRITICAL: if a malicious prover could
   exploit it to produce a false proof, it's CRITICAL.
 - Your findings ARE the audit. Be precise, cite file+line locations, and
