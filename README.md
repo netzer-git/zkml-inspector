@@ -45,6 +45,36 @@ Or use the prompt shortcut:
 /analyze-quick paper=./paper.pdf codebase=./src/
 ```
 
+### Batch Analysis (multiple papers)
+
+Process multiple paper+codebase pairs from a JSON manifest:
+
+```
+/analyze-batch manifest=../zkml-targets/batch_manifest.json
+```
+
+Create a `batch_manifest.json` (see `examples/batch_manifest.json`):
+
+```json
+{
+  "analyses": [
+    { "name": "ezkl", "paper": "./ezkl/paper.pdf", "codebase": "./ezkl/code/" },
+    { "name": "zkllm", "paper": "./zkllm/paper.tex", "codebase": "./zkllm/src/" }
+  ],
+  "output_dir": "./reports/v0.1"
+}
+```
+
+- `output_dir` (optional): custom output folder for reports, relative to manifest.
+  If omitted, auto-creates `<manifest_dir>/reports/run_<YYYYMMDD_HHMMSS>/`.
+
+**Resume support**: If interrupted, re-invoke `/analyze-batch` in a fresh
+conversation with the same manifest. It detects existing reports and
+skips already-completed analyses.
+
+> **Tip**: Use a multi-root VS Code workspace containing both the zkml-inspector
+> folder and your targets folder for best results.
+
 ### Supported Inputs
 
 | Input      | Formats                     |
@@ -90,7 +120,8 @@ foundation (`references/zkp_foundations.md`) covering the commit → prove → v
 │   └── report-writer.agent.md    # Report generation sub-agent
 ├── prompts/
 │   ├── analyze-full.prompt.md    # Full paper vs. code analysis
-│   └── analyze-quick.prompt.md   # Quick scan for critical issues
+│   ├── analyze-quick.prompt.md   # Quick scan for critical issues
+│   └── analyze-batch.prompt.md   # Batch analysis from manifest
 └── skills/analyze-zkml-gap/
     ├── SKILL.md                  # Shared library documentation
     └── references/               # ZKP knowledge base (foundations, operators, etc.)

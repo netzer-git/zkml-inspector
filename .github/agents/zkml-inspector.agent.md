@@ -12,6 +12,7 @@ tools:
   - agent
   - todo
   - web
+  - createFile
   - pdf-reader/read_pdf
 agents:
   - paper-analyst
@@ -106,6 +107,10 @@ The **report-writer** agent will write the file to disk itself using its
 confirms the file was saved:
 1. **Present a summary** to the user in chat.
 2. **Confirm the file location**: tell the user where the report was saved.
+
+**Fallback:** If report-writer returns the report content but could not
+save the file, use YOUR `createFile` tool to write it to `output_path`.
+The report MUST be on disk before the pipeline is considered complete.
 
 ## Workflow: Quick Scan
 
