@@ -425,67 +425,61 @@ class TestCrossConsistency:
                 assert (REFERENCES_DIR / ref).is_file()
 
     def test_prompts_reference_orchestrator(self) -> None:
-        """Prompt files should use their respective agent."""
-        agent_map = {
-            "analyze-full.prompt.md": "zkml-inspector",
-            "analyze-quick.prompt.md": "zkml-inspector",
-            "analyze-batch.prompt.md": "batch-runner",
-        }
+        """All prompt files should reference the zkml-inspector agent."""
         for filename in EXPECTED_PROMPTS:
             fm = _extract_frontmatter(PROMPTS_DIR / filename)
-            expected_agent = agent_map[filename]
-            assert expected_agent in fm, (
-                f"{filename} should reference the {expected_agent} agent"
+            assert "zkml-inspector" in fm, (
+                f"{filename} should reference the zkml-inspector agent"
             )
 
 
 # ============================================================================
-# Batch runner tests
+# Batch prompt tests
 # ============================================================================
 
-class TestBatchRunner:
-    """Validate batch-runner agent configuration."""
+class TestBatchPrompt:
+    """Validate batch analysis prompt configuration."""
 
-    def test_batch_runner_has_zkml_inspector_agent(self) -> None:
-        """batch-runner must list zkml-inspector as its sub-agent."""
-        fm = _extract_frontmatter(AGENTS_DIR / "batch-runner.agent.md")
-        assert "zkml-inspector" in fm, (
-            "batch-runner should list zkml-inspector in its agents"
+    def test_batch_prompt_references_analyze_full(self) -> None:
+        """Batch prompt should delegate to analyze-full, not duplicate pipeline."""
+        text = (PROMPTS_DIR / "analyze-batch.prompt.md").read_text(encoding="utf-8")
+        assert "analyze-full" in text, (
+            "analyze-batch should reference analyze-full for the per-entry pipeline"
         )
 
-    def test_batch_runner_is_user_invocable(self) -> None:
-        """batch-runner should be user-invocable (no user-invocable: false)."""
-        fm = _extract_frontmatter(AGENTS_DIR / "batch-runner.agent.md")
-        assert "user-invocable: false" not in fm, (
-            "batch-runner should be user-invocable"
+    def test_batch_prompt_has_resume_logic(self) -> None:
+        """Batch prompt must describe resume behavior."""
+        text = (PROMPTS_DIR / "analyze-batch.prompt.md").read_text(encoding="utf-8")
+        assert "resume" in text.lower() or "skip" in text.lower(), (
+            "analyze-batch should describe resume/skip behavior"
         )
 
-    def test_batch_runner_has_resume_logic(self) -> None:
-        """batch-runner must describe resume behavior."""
-        text = (AGENTS_DIR / "batch-runner.agent.md").read_text(encoding="utf-8")
-        assert "resume" in text.lower() or "Resume" in text, (
-            "batch-runner should describe resume behavior"
+    def test_batch_prompt_has_summary_json(self) -> None:
+        """Batch prompt must describe summary.json generation."""
+        text = (PROMPTS_DIR / "analyze-batch.prompt.md").read_text(encoding="utf-8")
+        assert "summary.json" in text, (
+            "analyze-batch should describe summary.json output"
         )
 
-    def test_batch_runner_has_timestamped_folder(self) -> None:
-        """batch-runner must create timestamped output folders."""
-        text = (AGENTS_DIR / "batch-runner.agent.md").read_text(encoding="utf-8")
-        assert "YYYYMMDD" in text or "timestamp" in text.lower(), (
-            "batch-runner should create timestamped output folders"
+    def test_batch_prompt_has_context_compaction(self) -> None:
+        """Batch prompt must describe context compaction between entries."""
+        text = (PROMPTS_DIR / "analyze-batch.prompt.md").read_text(encoding="utf-8")
+        assert "context compaction" in text.lower() or "Context compaction" in text, (
+            "analyze-batch should describe context compaction between entries"
         )
 
-    def test_batch_runner_saves_outside_workspace(self) -> None:
-        """batch-runner must save reports outside the zkml-inspector workspace."""
-        text = (AGENTS_DIR / "batch-runner.agent.md").read_text(encoding="utf-8")
-        assert "next to the manifest" in text.lower() or "NOT inside the zkml-inspector" in text, (
-            "batch-runner should save reports outside the zkml-inspector workspace"
+    def test_batch_prompt_saves_outside_workspace(self) -> None:
+        """Batch prompt must save reports outside the zkml-inspector workspace."""
+        text = (PROMPTS_DIR / "analyze-batch.prompt.md").read_text(encoding="utf-8")
+        assert "NOT inside the zkml-inspector" in text or "next to manifest" in text.lower(), (
+            "analyze-batch should save reports outside the zkml-inspector workspace"
         )
 
-    def test_batch_runner_delegates_to_zkml_inspector(self) -> None:
-        """batch-runner must delegate analysis to zkml-inspector, not do it itself."""
-        text = (AGENTS_DIR / "batch-runner.agent.md").read_text(encoding="utf-8")
-        assert "DO NOT" in text and "analysis yourself" in text.lower(), (
-            "batch-runner should explicitly delegate to zkml-inspector"
+    def test_batch_prompt_has_isolation_constraint(self) -> None:
+        """Batch prompt must enforce isolation between entries."""
+        text = (PROMPTS_DIR / "analyze-batch.prompt.md").read_text(encoding="utf-8")
+        assert "isolation" in text.lower(), (
+            "analyze-batch should enforce isolation between paper analyses"
         )
 
 
