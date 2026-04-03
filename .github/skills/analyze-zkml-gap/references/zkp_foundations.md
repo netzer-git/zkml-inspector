@@ -182,6 +182,8 @@ For EVERY interactive sub-protocol in the paper or code:
 | Opening proof skipped | Commitment exists but its opening at the evaluation point is never verified | Prover can commit to one value and open to another |
 | Challenge reuse | Same challenge used across independent sub-protocols without domain separation | Cross-protocol attack: prover correlates responses |
 
+> **Severity note:** For Fiat-Shamir severity, see CHECK-5.2 in soundness_checklist.md.
+
 ---
 
 ## First-Principles Constraint Derivation

@@ -56,6 +56,11 @@ against a paper manifest.
   `prove()`/`commit()` bodies, phantom counters, `sleep()` padding, discarded
   crypto results, commitments over empty/constant inputs.
 - **Severity**: CRITICAL
+- **Important distinction**: Mock **crypto operations** (empty prove/commit,
+  discarded proofs) are CRITICAL — they break soundness. Mock **test data**
+  (placeholder weights, random inputs) processed through a real, working
+  circuit are WARNING — the proof mechanism is sound, only the model is a
+  test model.
 
 ---
 
@@ -96,10 +101,12 @@ against a paper manifest.
   it accompanies. If not, the prover can adaptively choose it.
 - **Severity**: CRITICAL
 
-### CHECK-5.2: Fiat-Shamir includes all prover messages
-- **What**: Every prover message must be hashed into the transcript before
-  deriving the next challenge. Many papers focus on "could support Fiat-Shamir" rather than full implementation.
-- **Severity**: WARNING (CRITICAL if there is a fundamental theoretical issue preventing Fiat-Shamir support)
+### CHECK-5.2: Fiat-Shamir implementation
+- **What**: Most zkML papers use interactive proofs and treat Fiat-Shamir as
+  a straightforward future step. Escalate to CRITICAL only if the paper claims
+  Fiat-Shamir is possible but the protocol structure makes it theoretically
+  impossible (a paper soundness issue, not a code issue).
+- **Severity**: WARNING
 
 ### CHECK-5.3: No challenge reuse across sub-protocols
 - **What**: Each sub-protocol must use fresh challenges with domain separation
@@ -146,6 +153,7 @@ against a paper manifest.
 ---
 
 ### Severity Override Rules
-- **Fiat-Shamir**: If a paper only claims it "supports Fiat-Shamir", flag missing Fiat-Shamir parts as **WARNING**.
+- **Fiat-Shamir**: Missing Fiat-Shamir implementation is **WARNING** (see CHECK-5.2). Only CRITICAL if the protocol fundamentally cannot support it.
+- **Mock data vs mock crypto**: Placeholder test data (random weights, dummy inputs) through a working circuit is **WARNING**. Mock crypto operations (empty prove/commit) are CRITICAL (see CHECK-2.5).
 - **Omitted Operator Proofs**: If the paper omits proofs for operators not in its main focus, flag their absence as **WARNING**.
-- **Experimental Omissions**: If the codebase explicitly comments an implementation detail as "not-needed" or "omitted for the sake of the experiment", flag it as **WARNING**.
+- **Prototype gaps**: Features marked TODO, "for simplicity", or not in the paper's core contribution are **WARNING**, not CRITICAL.

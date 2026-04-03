@@ -120,6 +120,9 @@ Key checks to always perform:
   - Phantom counters (incremented but never consumed by constraints)
   - `sleep()` calls for time padding
   - Crypto results that are discarded
+  - **Important**: Distinguish mock **crypto** (CRITICAL) from mock **test data**.
+    Placeholder weights or random inputs processed through a real circuit are
+    WARNING — the proof mechanism is sound, only the model is a test model.
 
 ### Phase 5: Protocol Transcript Audit
 
@@ -129,7 +132,9 @@ Using the paper manifest's `protocol_rounds` and the code's prove functions:
 2. Identify prover-computed values and verifier challenges
 3. Verify: is each prover value committed BEFORE its associated challenge?
 4. Verify: does each commitment have a verified opening?
-5. If Fiat-Shamir: verify every prover message is hashed into the transcript. If the paper focuses on "could support" Fiat-Shamir and simplicity, only WARN unless theoretically impossible.
+5. **Fiat-Shamir**: Missing Fiat-Shamir implementation is **WARNING**. Only
+   flag as CRITICAL if the protocol structure makes Fiat-Shamir theoretically
+   impossible (a paper soundness issue, not a code issue).
 6. Check for challenge reuse across sub-protocols (needs domain separation)
 
 ### Phase 6: Precision Audit
@@ -146,6 +151,12 @@ Using the paper manifest's `quantization` field and each operator's
 4. Check approximation error bounds match what the paper specifies
 
 ## Output Format
+
+Before finalizing your output, merge findings that share a root cause into
+a single finding describing the full impact. Limit INFO findings to
+security-relevant observations — do not report correct implementations
+unless they are noteworthy (e.g., a Transformer Killer op that is correctly
+constrained).
 
 Return a structured audit report:
 
@@ -231,13 +242,16 @@ Return a structured audit report:
 
 - NEVER execute code from the analyzed codebase — only READ and PARSE
 - ALWAYS validate file paths — reject paths with `..` traversal
+- For all `file` and `line` fields, use relative paths from the codebase root
+  (e.g., `src/model.rs:42`, not `model.rs:42` or an absolute path).
 - When you find an operator, READ the actual implementation, don't just
   report the function name. The implementation details matter.
 - NEVER downplay a soundness issue. If a constraint is missing, it's CRITICAL.
 - ALWAYS distinguish "paper says X" from "code does Y" — never conflate them.
 - Downgrade missing features from CRITICAL to WARNING if explicitly commented as "not-needed" or "omitted for the sake of the experiment" by authors, unless they are central to the paper's claims.
-- When in doubt between WARNING and CRITICAL: if a malicious prover could
-  exploit it to produce a false proof, it's CRITICAL.
+- When in doubt between WARNING and CRITICAL: check the Severity Override
+  Rules in soundness_checklist.md first. If no override applies and a
+  malicious prover could exploit it to produce a false proof, it's CRITICAL.
 - Your findings ARE the audit. Be precise, cite file+line locations, and
   provide actionable recommendations.
 - If the codebase is very large (>1000 files), use the paper manifest to
