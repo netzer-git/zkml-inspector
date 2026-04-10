@@ -65,13 +65,19 @@ replacement — a significant behavioral change not documented in the paper.
 | 2 | CRITICAL | Intermediate activation constraints | §5, para 3 | src/circuit.rs | Missing for LayerNorm output |
 | 3 | WARNING | Range check on all intermediates | §5, para 4 | src/range.rs | Present but threshold is 2^12 not 2^15 |
 
-### 3.2 Non-Deterministic Operations
+### 3.2 Wire Disconnect
 
-| # | Severity | Operation | File | Line | Issue |
-|---|----------|-----------|------|------|-------|
-| 1 | WARNING | Dropout | src/model/transformer.rs | 42 | Dropout still present in forward pass |
+| # | Severity | Finding | Location(s) | Description | Recommendation |
+|---|----------|---------|-------------|-------------|----------------|
+| 1 | CRITICAL | Wire disconnect between layer 2 and layer 3 | src/layers/linear.rs:120, src/layers/norm.rs:15 | Layer 2 output (linear.rs) uses wire w_42 but layer 3 input (norm.rs) reads from w_99. Prover can substitute arbitrary values between layers. | Add copy constraint: w_42 === w_99 |
 
-### 3.3 Unconstrained Intermediate Values
+### 3.3 Non-Deterministic Operations
+
+| # | Severity | Operation | Location(s) | Issue |
+|---|----------|-----------|-------------|-------|
+| 1 | WARNING | Dropout | src/model/transformer.rs:42 | Dropout still present in forward pass |
+
+### 3.4 Unconstrained Intermediate Values
 
 - LayerNorm output is unconstrained — a prover could substitute arbitrary normalized values
 - This allows a "layer-skipping attack" where the prover skips normalization entirely
@@ -102,10 +108,10 @@ replacement — a significant behavioral change not documented in the paper.
 
 ### 5.1 Critical Soundness Issues
 
-| # | Check | Status | Location | Description | Recommendation |
-|---|-------|--------|----------|-------------|----------------|
-| 1 | CHECK-1.1 | ❌ FAIL | src/commitment.rs | Bias vectors not committed | Add bias commitment alongside weight commitment |
-| 2 | CHECK-2.1 | ❌ FAIL | — | LayerNorm output unconstrained | Implement LayerNorm constraints |
+| # | Check | Status | Location(s) | Description | Recommendation |
+|---|-------|--------|-------------|-------------|----------------|
+| 1 | CHECK-1.1 | ❌ FAIL | src/commitment.rs:30, src/model/weights.rs:72 | Bias vectors not committed — weight commitment in commitment.rs omits biases, and weight loading in weights.rs skips bias registration | Add bias commitment alongside weight commitment |
+| 2 | CHECK-2.1 | ❌ FAIL | — | LayerNorm output unconstrained (entire operator missing) | Implement LayerNorm constraints |
 | 3 | CHECK-3.1 | ❌ FAIL | src/model/transformer.rs:42 | Dropout present | Remove dropout for inference mode |
 
 ### 5.2 Zero-Knowledge Property
@@ -145,7 +151,7 @@ replacement — a significant behavioral change not documented in the paper.
    - **Impact**: Without this, the prover can skip normalization — breaks model correctness
 
 2. **Commit bias vectors** — All weight+bias parameters must be Poseidon-committed
-   - **Location**: src/commitment.rs
+   - **Location(s)**: src/commitment.rs:30, src/commitment.rs:58
    - **Action**: Add bias vectors to the commitment tree alongside weight matrices
    - **Impact**: Prover can shift all layer outputs by arbitrary constants
 

@@ -150,6 +150,24 @@ Using the paper manifest's `quantization` field and each operator's
    extra bits)
 4. Check approximation error bounds match what the paper specifies
 
+### Phase 7: Severity Validation (mandatory — run after all findings)
+
+Before outputting, re-read the **Severity Override Rules** at the end of
+`soundness_checklist.md` and sweep every finding:
+
+1. For each finding, check whether ANY override rule in the checklist
+   applies. The rules are the authoritative source — do not hardcode
+   specific cases here.
+2. If an override applies and the finding's current severity is higher,
+   **downgrade** it and add a note: `"severity_override": "<rule applied>"`
+3. If no override applies and a malicious prover could exploit the gap to
+   produce a false proof, confirm CRITICAL.
+4. Log the override check result for each finding (even if severity is
+   unchanged) so the report-writer can audit your reasoning.
+
+This phase is **not optional**. Skipping it is the most common source of
+severity misclassification.
+
 ## Output Format
 
 Before finalizing your output, merge findings that share a root cause into
@@ -176,7 +194,10 @@ Return a structured audit report:
       "status": "COMMITTED | MISSING | PARTIAL | MOCK",
       "severity": "CRITICAL",
       "paper_says": "Section 5: weights committed via Poseidon hash",
-      "code_does": "src/commitment.rs:45 — weights are Poseidon-hashed into instance column",
+      "code_does": "weights are Poseidon-hashed into instance column",
+      "locations": [
+        { "file": "src/commitment.rs", "line": 45 }
+      ],
       "recommendation": "..."
     }
   ],
@@ -187,9 +208,10 @@ Return a structured audit report:
       "status": "IMPLEMENTED | MISSING | MISMATCH | SUBSTITUTION | UNDOCUMENTED",
       "severity": "WARNING",
       "paper_says": "Section 3.2: 8-segment piecewise-linear, error <= 0.01",
-      "code_does": "src/ops/softmax.rs:12 — 3-segment piecewise-linear",
-      "file": "src/ops/softmax.rs",
-      "line": 12,
+      "code_does": "3-segment piecewise-linear",
+      "locations": [
+        { "file": "src/ops/softmax.rs", "line": 12 }
+      ],
       "constraint_extracted": "y = alpha_i * x + beta_i for segment i",
       "constraint_correct": false,
       "impact": "3 segments gives ~0.05 error vs paper's 0.01 bound",
@@ -203,9 +225,11 @@ Return a structured audit report:
       "severity": "CRITICAL",
       "title": "Wire disconnect between layer 3 and layer 4",
       "paper_says": "All layer outputs feed into next layer (implicit)",
-      "code_does": "src/circuit.rs:120 — layer 3 output uses wire w_42, layer 4 input uses w_99",
-      "file": "src/circuit.rs",
-      "line": 120,
+      "code_does": "layer 3 output uses wire w_42, layer 4 input uses w_99",
+      "locations": [
+        { "file": "src/circuit.rs", "line": 120 },
+        { "file": "src/circuit.rs", "line": 155 }
+      ],
       "impact": "Prover can substitute arbitrary values between layers",
       "recommendation": "Add copy constraint: w_42 === w_99"
     }
@@ -217,9 +241,10 @@ Return a structured audit report:
       "severity": "CRITICAL",
       "title": "Prover value not committed before challenge",
       "paper_says": "Section 4: prover commits h(X) before receiving challenge r",
-      "code_does": "src/prove.rs:88 — h(X) computed after challenge r is derived",
-      "file": "src/prove.rs",
-      "line": 88,
+      "code_does": "h(X) computed after challenge r is derived",
+      "locations": [
+        { "file": "src/prove.rs", "line": 88 }
+      ],
       "impact": "Prover can adaptively choose h(X) to pass verification",
       "recommendation": "Commit h(X) before deriving challenge r"
     }
@@ -242,8 +267,11 @@ Return a structured audit report:
 
 - NEVER execute code from the analyzed codebase — only READ and PARSE
 - ALWAYS validate file paths — reject paths with `..` traversal
-- For all `file` and `line` fields, use relative paths from the codebase root
-  (e.g., `src/model.rs:42`, not `model.rs:42` or an absolute path).
+- Every finding uses a `"locations"` array of `{"file", "line"}` objects.
+  Use relative paths from the codebase root (e.g., `src/model.rs`, not
+  `model.rs` or an absolute path). The array may be **empty** (when a
+  feature is entirely missing from the codebase) or contain **multiple
+  entries** (when the same finding spans several files or code blocks).
 - When you find an operator, READ the actual implementation, don't just
   report the function name. The implementation details matter.
 - NEVER downplay a soundness issue. If a constraint is missing, it's CRITICAL.

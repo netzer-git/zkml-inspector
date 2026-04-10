@@ -65,7 +65,7 @@ Status symbols:
 All findings from the soundness checklist and mock/phantom detection,
 ordered by severity. Each finding must have:
 - Severity badge
-- Location (file + line)
+- Location(s) (file + line for each entry; "—" if none)
 - What the paper says vs what the code does
 - Impact description
 - Recommendation
@@ -88,9 +88,14 @@ Each recommendation: what to do, where (file + line), and why.
 
 ## Rules
 
-1. **Every finding must have:** severity (CRITICAL/WARNING/INFO), location
-   (file + line where applicable), description, and recommendation
-2. **Severity assignment:**
+1. **Every finding must have:** severity (CRITICAL/WARNING/INFO), location(s)
+   (file + line where applicable — may be empty or have multiple entries),
+   description, and recommendation
+2. **Location rendering:** Findings use a `locations` array. If the array is
+   empty, display "—" for the location. If it has one entry, display
+   `file:line`. If it has multiple entries, list all of them (e.g.,
+   `file_a:10, file_b:25`) so the reader can see every affected site.
+3. **Severity assignment:**
    - `CRITICAL`: Breaks soundness, ZK property, or allows cheating proofs
    - `WARNING`: Affects accuracy or security in edge cases
    - `INFO`: Best practice recommendation or documentation issue
@@ -128,7 +133,13 @@ file path — do NOT repeat the full report in chat.
 ## Constraints on Your Behavior
 
 - NEVER invent findings — only format what the analysis agents provided
-- NEVER downgrade severity — use the severity from the code-inspector
+- Use the severity from the code-inspector as the **default**
+- **Severity audit**: Before writing, cross-check each finding's severity
+  against the Severity Override Rules in `soundness_checklist.md`.
+  If a severity violates an override rule, add a "Severity Note" to the
+  finding explaining the discrepancy and apply the override-corrected
+  severity in the report. This is the only case where you may change
+  a severity from the code-inspector.
 - If findings from different agents conflict, present both perspectives
   and flag the conflict
 - Keep the report readable. Use tables for structured comparisons,
