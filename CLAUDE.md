@@ -9,11 +9,13 @@ python -m pytest tests/ -v              # Run all tests
 python -m pytest tests/ -v -k "batch"  # Run a single test class/pattern
 ```
 
-No build step, no runtime dependencies. Python 3.10+ required. Node.js required only for PDF reading via the `pdf-reader` MCP server (`.vscode/mcp.json`).
+No build step, no runtime dependencies. Python 3.10+ required. Node.js required only for PDF reading via the `pdf-reader` MCP server (`.vscode/mcp.json`, `.claude/mcp.json`).
 
 ## Architecture
 
-**Orchestrator + 3 sub-agents**, strictly sequential pipeline:
+**3 sub-agents**, strictly sequential pipeline, available for both GitHub Copilot and Claude Code:
+
+### GitHub Copilot (`.github/`)
 
 ```
 zkml-inspector (orchestrator)       .github/agents/zkml-inspector.agent.md
@@ -24,20 +26,30 @@ zkml-inspector (orchestrator)       .github/agents/zkml-inspector.agent.md
 
 Each agent is defined as a `.agent.md` file with YAML frontmatter (`description`, `tools`, `agents`). Sub-agents have `user-invocable: false`. Prompt shortcuts live in `.github/prompts/`.
 
+### Claude Code (`.claude/`)
+
+```
+/analyze-full or /analyze-batch     .claude/commands/analyze-full.md
+  ├── paper-analyst   (step 1)      .claude/agents/paper-analyst.md
+  ├── code-inspector  (step 2)      .claude/agents/code-inspector.md
+  └── report-writer   (step 3)      .claude/agents/report-writer.md
+```
+
+In Claude Code, the main session acts as orchestrator (since sub-agents cannot dispatch further sub-agents). Commands in `.claude/commands/` contain the orchestration workflow. Sub-agents are dispatched via the Agent tool.
+
 ### Data flow
 
 1. **paper-analyst** reads a `.pdf` or `.tex` paper → outputs **paper manifest JSON** (operators, commitment_obligations, proof_system, quantization)
 2. **code-inspector** receives the paper manifest + codebase path → outputs **audit findings JSON** (commitment_audit, operator_coverage, soundness_findings)
-3. **report-writer** receives both → writes a **Markdown report** to disk via `createFile`
+3. **report-writer** receives both → writes a **Markdown report** to disk (via `createFile` in Copilot, `Write` in Claude Code)
 
-The orchestrator never does analysis itself — it validates inputs, dispatches sub-agents in order, passes outputs forward, and saves the report to `examples/{name}_report.md` if no path is specified.
+The orchestrator never does analysis itself — it validates inputs, dispatches sub-agents in order, passes outputs forward, and saves the report to `reports/{name}_report.md` if no path is specified.
 
 ### Workflows
 
 | Prompt | Behavior |
 |--------|----------|
 | `/analyze-full` | Full pipeline, complete report |
-| `/analyze-quick` | Full pipeline, code-inspector filters to CRITICAL only |
 | `/analyze-batch` | Reads `batch_manifest.json`, runs full pipeline per entry, saves reports **next to the manifest** (NOT inside zkml-inspector workspace), produces `summary.json`, supports resume by skipping existing reports |
 
 ### Key constraints
@@ -49,12 +61,16 @@ The orchestrator never does analysis itself — it validates inputs, dispatches 
 
 ## Reference Knowledge Base
 
-`.github/skills/analyze-zkml-gap/references/` — loaded by agents as needed:
+Shared reference files live in the top-level `references/` directory — a single copy used by both Copilot and Claude Code agents at runtime:
 
-- `zkp_foundations.md` — ZKP lifecycle (commit → prove → verify); loaded by paper-analyst and code-inspector
-- `soundness_checklist.md` — Audit checks (CHECK-x.x IDs) including mock/phantom detection (CHECK-2.5); loaded by code-inspector
-- `operator_catalog.md` — 30+ operators (MatMul, ReLU, Softmax, LayerNorm, etc.) with ZK gap signatures
-- `approximation_db.md` — Approximation strategies with error bounds
+| Reference | Path | Used by |
+|-----------|------|---------|
+| `zkp_foundations.md` | `references/` | paper-analyst, code-inspector |
+| `soundness_checklist.md` | `references/` | code-inspector, report-writer |
+| `operator_catalog.md` | `references/` | paper-analyst |
+| `approximation_db.md` | `references/` | paper-analyst |
+
+Single source of truth — both platforms read from the same files.
 
 ## Report Conventions
 
@@ -65,14 +81,19 @@ The orchestrator never does analysis itself — it validates inputs, dispatches 
 
 ## Tests
 
-`tests/test_scripts.py` validates:
+`tests/test_scripts.py` validates the **Copilot layer** (`.github/`):
 - All required agent, prompt, and reference files exist
 - Agent frontmatter has required fields (`description`, `tools`, `agents` for orchestrator)
 - Sub-agents are not user-invocable and don't have `execute` tool
-- No references to removed scripts (`parse_paper.py`, `inspect_codebase.py`, etc.) or removed components (`zkp-auditor`, `gate_cost_table`)
+- No references to removed scripts or removed components
 - Content quality: paper-analyst outputs commitment_obligations, code-inspector references soundness_checklist.md, report-writer has dedup logic
 - Batch prompt has resume logic, summary.json output, context compaction, and isolation between entries
 - `examples/batch_manifest.json` is valid JSON with required fields (`name`, `paper`, `codebase`)
+
+`tests/test_claude_commands.py` validates the **Claude Code layer** (`.claude/`):
+- `.claude/commands/analyze-full.md` and `analyze-batch.md` exist with required orchestration elements
+- `.claude/mcp.json` is valid and consistent with `.vscode/mcp.json`
+- Commands use Claude Code tool names (`Write`, `Agent`, `mcp__pdf-reader__read_pdf`) not Copilot names (`createFile`)
 
 ## zkML Domain Terms
 
