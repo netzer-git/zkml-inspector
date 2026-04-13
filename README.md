@@ -112,12 +112,15 @@ foundation (`references/zkp_foundations.md`) covering the commit → prove → v
 │   ├── paper-analyst.agent.md    # Paper extraction sub-agent
 │   ├── code-inspector.agent.md   # Code audit sub-agent
 │   └── report-writer.agent.md    # Report generation sub-agent
-├── prompts/
-│   ├── analyze-full.prompt.md    # Full paper vs. code analysis
-│   └── analyze-batch.prompt.md   # Batch analysis from manifest
-└── skills/analyze-zkml-gap/
-    ├── SKILL.md                  # Shared library documentation
-    └── references/               # ZKP knowledge base (foundations, operators, etc.)
+└── prompts/
+    ├── analyze-full.prompt.md    # Full paper vs. code analysis
+    └── analyze-batch.prompt.md   # Batch analysis from manifest
+
+references/                        # Shared ZKP knowledge base (used by both platforms)
+├── zkp_foundations.md
+├── operator_catalog.md
+├── soundness_checklist.md
+└── approximation_db.md
 ```
 
 ## License

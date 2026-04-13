@@ -6,20 +6,6 @@
   "author": "zkml-inspector",
   "repository": "https://github.com/zkml-inspector/zkml-inspector",
   "license": "MIT",
-  "skills": [
-    {
-      "name": "analyze-zkml-gap",
-      "path": ".github/skills/analyze-zkml-gap/SKILL.md",
-      "triggers": [
-        "zkml",
-        "paper gap",
-        "discrepancy report",
-        "zero-knowledge ml",
-        "paper vs code",
-        "implementation gap"
-      ]
-    }
-  ],
   "agents": [
     {
       "name": "zkml-inspector",

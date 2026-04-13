@@ -22,7 +22,6 @@ import pytest
 ROOT = Path(__file__).resolve().parent.parent
 AGENTS_DIR = ROOT / ".github" / "agents"
 PROMPTS_DIR = ROOT / ".github" / "prompts"
-SKILL_DIR = ROOT / ".github" / "skills" / "analyze-zkml-gap"
 REFERENCES_DIR = ROOT / "references"
 
 
@@ -72,16 +71,6 @@ class TestFileExistence:
         path = REFERENCES_DIR / filename
         assert path.is_file(), f"Missing reference file: {path}"
 
-    def test_skill_file_exists(self) -> None:
-        assert (SKILL_DIR / "SKILL.md").is_file()
-
-    def test_no_scripts_directory(self) -> None:
-        """Scripts directory should not exist (scripts removed in favor of agent analysis)."""
-        scripts_dir = SKILL_DIR / "scripts"
-        assert not scripts_dir.exists(), (
-            f"Scripts directory should not exist: {scripts_dir}. "
-            "Analysis is performed by agents directly, not by helper scripts."
-        )
 
 
 # ============================================================================
@@ -174,11 +163,6 @@ class TestNoScriptReferences:
         matches = SCRIPT_PATTERNS.findall(text)
         assert not matches, f"{filename} still references scripts: {matches}"
 
-    def test_skill_no_script_refs(self) -> None:
-        text = (SKILL_DIR / "SKILL.md").read_text(encoding="utf-8")
-        matches = SCRIPT_PATTERNS.findall(text)
-        assert not matches, f"SKILL.md still references scripts: {matches}"
-
     def test_copilot_instructions_no_script_refs(self) -> None:
         path = ROOT / ".github" / "copilot-instructions.md"
         if path.exists():
@@ -212,11 +196,6 @@ class TestNoRemovedComponentReferences:
         text = (PROMPTS_DIR / filename).read_text(encoding="utf-8")
         assert "zkp-auditor" not in text, f"{filename} still references zkp-auditor"
         assert "gate_cost_table" not in text, f"{filename} still references gate_cost_table"
-
-    def test_skill_no_auditor_refs(self) -> None:
-        text = (SKILL_DIR / "SKILL.md").read_text(encoding="utf-8")
-        assert "zkp-auditor" not in text, "SKILL.md still references zkp-auditor"
-        assert "gate_cost_table" not in text, "SKILL.md still references gate_cost_table"
 
     def test_copilot_instructions_no_auditor_refs(self) -> None:
         path = ROOT / ".github" / "copilot-instructions.md"
@@ -414,14 +393,6 @@ class TestCrossConsistency:
         text = (AGENTS_DIR / "zkml-inspector.agent.md").read_text(encoding="utf-8")
         for agent in ["paper-analyst", "code-inspector", "report-writer"]:
             assert agent in text, f"Orchestrator missing sub-agent: {agent}"
-
-    def test_skill_references_match_files(self) -> None:
-        """SKILL.md should only reference files that exist."""
-        text = (SKILL_DIR / "SKILL.md").read_text(encoding="utf-8")
-        # Check that referenced reference files exist
-        for ref in EXPECTED_REFERENCES:
-            if ref in text:
-                assert (REFERENCES_DIR / ref).is_file()
 
     def test_prompts_reference_orchestrator(self) -> None:
         """All prompt files should reference the zkml-inspector agent."""
