@@ -23,7 +23,7 @@ ROOT = Path(__file__).resolve().parent.parent
 AGENTS_DIR = ROOT / ".github" / "agents"
 PROMPTS_DIR = ROOT / ".github" / "prompts"
 SKILL_DIR = ROOT / ".github" / "skills" / "analyze-zkml-gap"
-REFERENCES_DIR = SKILL_DIR / "references"
+REFERENCES_DIR = ROOT / "references"
 
 
 # ---------------------------------------------------------------------------

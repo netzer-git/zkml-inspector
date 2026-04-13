@@ -4,7 +4,7 @@
 
 zkml-inspector is a multi-agent VS Code Copilot system that analyzes gaps between zkML (zero-knowledge machine learning) research papers and their implementations. It finds soundness violations, missing constraints, precision mismatches, and uncommitted values.
 
-No runtime dependencies — the agent pipeline uses built-in LLM capabilities. Reference data is stored in Markdown under `.github/skills/analyze-zkml-gap/references/`.
+No runtime dependencies — the agent pipeline uses built-in LLM capabilities. Reference data is stored in Markdown under `references/` at the repo root (shared across Copilot and Claude Code agents).
 
 PDF reading requires the `pdf-reader` MCP server (configured in `.vscode/mcp.json`). It uses `npx @sylphx/pdf-reader-mcp` — Node.js must be available.
 
@@ -58,7 +58,7 @@ python -m pytest tests/ -v           # Validates agent configs, references, and 
 
 ## Code Style
 - Python 3.10+ with type hints on all signatures; UTF-8 everywhere
-- Reference data lives in `.github/skills/analyze-zkml-gap/references/` as Markdown
+- Reference data lives in `references/` at the repo root as Markdown
 - All agents output JSON to stdout (parseable by orchestrator); errors to stderr
 - Exit code 0 = success, 1 = error
 

@@ -22,11 +22,11 @@ audit — if you miss something, the code-inspector won't check for it.
 
 ## References
 
-**Before analysis, read:** `.github/skills/analyze-zkml-gap/references/zkp_foundations.md`
+**Before analysis, read:** `references/zkp_foundations.md`
 
 Consult these when cross-referencing known operators or approximation strategies:
-- `.github/skills/analyze-zkml-gap/references/operator_catalog.md`
-- `.github/skills/analyze-zkml-gap/references/approximation_db.md`
+- `references/operator_catalog.md`
+- `references/approximation_db.md`
 
 ## HARD REQUIREMENT: Actual Paper File
 

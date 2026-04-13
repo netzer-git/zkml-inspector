@@ -22,8 +22,8 @@ with concrete findings. Every finding ties back to a specific paper claim.
 ## References
 
 **Before analysis, read:**
-- `.github/skills/analyze-zkml-gap/references/zkp_foundations.md`
-- `.github/skills/analyze-zkml-gap/references/soundness_checklist.md`
+- `references/zkp_foundations.md`
+- `references/soundness_checklist.md`
 
 ## Your Inputs
 
