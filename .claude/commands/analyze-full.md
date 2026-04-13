@@ -35,7 +35,19 @@ When dispatching sub-agents, enforce these rules:
 - **No memory:** Sub-agents must not create agent memory files. Each dispatch
   is stateless.
 
-## Step 1: Paper Analysis (paper-analyst)
+## Step 1: Create Task List
+
+Use `TaskCreate` to create tasks for the pipeline steps:
+1. **Paper analysis** — subject: `Paper analysis (<paper_name>)`, activeForm: `Analyzing paper`
+2. **Code audit** — subject: `Code audit (<codebase_name>)`, activeForm: `Auditing codebase`
+3. **Report generation** — subject: `Report generation`, activeForm: `Generating report`
+
+Set up `addBlockedBy` dependencies so code audit is blocked by paper analysis,
+and report generation is blocked by code audit.
+
+## Step 2: Paper Analysis (paper-analyst)
+
+Mark the paper analysis task as `in_progress` using `TaskUpdate`.
 
 Use the Agent tool to dispatch the **paper-analyst** sub-agent with the paper file path.
 
@@ -47,12 +59,14 @@ The paper-analyst will read the paper and produce a **paper manifest JSON** cont
 
 **Quality gate:** Before proceeding, verify the paper manifest contains all four fields above. If the manifest is incomplete, briefly note the gaps but proceed — the code-inspector will work with what's available.
 
-After paper-analyst completes, provide a brief progress update to the user.
+Mark the paper analysis task as `completed`. Provide a brief progress update to the user.
 
-## Step 2: Code Audit (code-inspector)
+## Step 3: Code Audit (code-inspector)
+
+Mark the code audit task as `in_progress` using `TaskUpdate`.
 
 Use the Agent tool to dispatch the **code-inspector** sub-agent with:
-- The paper manifest (from Step 1)
+- The paper manifest (from Step 2)
 - The codebase path
 
 The code-inspector will use the paper manifest as its verification checklist,
@@ -60,9 +74,11 @@ auditing the codebase against every claim in the paper. It produces an
 **audit findings JSON** with commitment_audit, operator_coverage,
 soundness_findings, protocol_transcript_findings, and precision_findings.
 
-After code-inspector completes, provide a brief progress update to the user.
+Mark the code audit task as `completed`. Provide a brief progress update to the user.
 
-## Step 3: Report Generation (report-writer)
+## Step 4: Report Generation (report-writer)
+
+Mark the report generation task as `in_progress` using `TaskUpdate`.
 
 Determine the `output_path` for the report file:
 1. If the user specified an output path, use that.
@@ -72,8 +88,8 @@ Determine the `output_path` for the report file:
    - Example: `reports/zkllm_report.md`
 
 Use the Agent tool to dispatch the **report-writer** sub-agent with:
-- The paper manifest (from Step 1)
-- The audit findings (from Step 2)
+- The paper manifest (from Step 2)
+- The audit findings (from Step 3)
 - The `output_path` for the report file
 
 The report-writer will produce a Markdown report covering:
@@ -92,6 +108,8 @@ The report-writer uses the Write tool to save the report to disk.
 If report-writer returns the report content but could not save the file,
 use the Write tool yourself to write it to `output_path`.
 The report MUST be on disk before the pipeline is considered complete.
+
+Mark the report generation task as `completed`.
 
 ## Final Summary
 

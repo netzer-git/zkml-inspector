@@ -41,6 +41,14 @@ The manifest is a JSON file with this structure:
    does not exist.
 4. Validate that every paper file and codebase directory exists. List any
    missing paths and skip those entries (do not abort the batch).
+5. **Create tasks** — Use the `TaskCreate` tool to create a task list for the
+   batch run. Create one task per valid analysis entry (subject format:
+   `Analyze <name> (<i>/<n>)`, e.g. `Analyze zkllm (1/4)`), plus one task
+   for `Generate summary.json` and one for `Print final summary table`.
+   Set up `addBlockedBy` dependencies so each analysis task is blocked by the
+   previous one, the summary task is blocked by all analysis tasks, and the
+   final table task is blocked by the summary task. Mark skipped entries'
+   tasks as `completed` immediately with a note in the description.
 
 ## Phase 1 — Sequential Analysis (one entry at a time)
 
@@ -51,12 +59,16 @@ For **each** entry in the `analyses` array, in order:
 
 1. **Check for existing report** — if `<output_dir>/<name>_report.md` already
    exists, **skip** this entry and log "Skipping <name> — report already exists".
+   Mark its task as `completed` (description: "Skipped — report already exists").
    This enables resume: re-invoking with the same manifest after an interrupted
    batch will pick up where it left off.
 
-2. **Print progress** — e.g., `[1/4] Analyzing: zkllm`
+2. **Mark task in_progress** — Use `TaskUpdate` to set this entry's task
+   status to `in_progress`.
 
-3. **Run the full analysis** — Execute the `/analyze-full` workflow for this
+3. **Print progress** — e.g., `[1/4] Analyzing: zkllm`
+
+4. **Run the full analysis** — Execute the `/analyze-full` workflow for this
    entry, providing:
    - `paper` = the entry's absolute paper path
    - `codebase` = the entry's absolute codebase path
@@ -68,10 +80,13 @@ For **each** entry in the `analyses` array, in order:
    paper-analyst uses `mcp__pdf-reader__read_pdf` for PDF files. The
    report-writer uses the Write tool to save the report.
 
-4. **Confirm** the report file was written. If report-writer could not write
+5. **Confirm** the report file was written. If report-writer could not write
    it, use the Write tool yourself to save the report.
 
-5. **Context compaction** — After finishing each entry, mentally discard the
+6. **Mark task completed** — Use `TaskUpdate` to set this entry's task status
+   to `completed`.
+
+7. **Context compaction** — After finishing each entry, mentally discard the
    paper-specific details (manifest, findings, operator lists). Carry forward
    **only**:
    - The overall batch plan (which entries remain)
@@ -84,6 +99,8 @@ For **each** entry in the `analyses` array, in order:
 6. Move to the next entry.
 
 ## Phase 2 — Summary JSON
+
+Mark the `Generate summary.json` task as `in_progress` using `TaskUpdate`.
 
 After **all** entries are complete (or skipped), generate a summary file at
 `<output_dir>/summary.json`.
@@ -116,7 +133,11 @@ an array of **every deduplicated finding** from that report, using this schema:
 
 Use the Write tool to save summary.json to disk.
 
+Mark the `Generate summary.json` task as `completed`.
+
 ## Phase 3 — Final Summary Table
+
+Mark the `Print final summary table` task as `in_progress` using `TaskUpdate`.
 
 Print a summary table to the user:
 
@@ -128,6 +149,8 @@ Print a summary table to the user:
 ```
 
 Then confirm: "All reports saved to `<output_dir>/`. Summary at `summary.json`."
+
+Mark the `Print final summary table` task as `completed`.
 
 ## Important Constraints
 
