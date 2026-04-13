@@ -66,7 +66,7 @@ python -m pytest tests/ -v           # Validates agent configs, references, and 
 - Severity levels: `CRITICAL`, `WARNING`, `INFO`
 - Every finding: severity + location (file + line) + description + recommendation
 - Tables use GitHub-Flavored Markdown; operator status uses ✅/⚠️/❌/➕
-- Reports saved to `examples/{name}_report.md` unless user specifies a path
+- Reports saved to `reports/{name}_report.md` unless user specifies a path
 
 ## zkML Domain Terms
 - **Operator** = mathematical operation (MatMul, Conv2D, ReLU, Softmax, etc.)

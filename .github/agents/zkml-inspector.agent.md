@@ -98,8 +98,8 @@ The report MUST be saved to disk as a Markdown file. Determine the output path:
 1. If the user specified an output path, use that.
 2. Otherwise, derive a filename from the paper title or codebase name:
    - Sanitize the name: lowercase, replace spaces with hyphens, strip special chars
-   - Pattern: `examples/{name}_report.md`
-   - Example: `examples/zkllm_report.md`
+   - Pattern: `reports/{name}_report.md`
+   - Example: `reports/zkllm_report.md`
 3. Include the `output_path` in the prompt to report-writer.
 
 The **report-writer** agent will write the file to disk itself using its

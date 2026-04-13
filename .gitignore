@@ -31,6 +31,10 @@ desktop.ini
 *.tmp
 paper_manifest.json
 code_manifest.json
+.claude/agent-memory/
+
+# Generated reports (keep .gitkeep)
+reports/*
 
 # PyMuPDF cache
 .pymupdf/

@@ -116,7 +116,7 @@ A complete Markdown report that you write directly to disk.
 ### File Output
 
 The orchestrator provides an `output_path` in your prompt (e.g.,
-`examples/zkllm_report.md`). You MUST use the `createFile` tool to write
+`reports/zkllm_report.md`). You MUST use the `createFile` tool to write
 the finished report to that path.
 
 1. Compose the full Markdown report in memory.
@@ -124,7 +124,7 @@ the finished report to that path.
 3. After writing, confirm the file path in your response so the
    orchestrator and user know where to find it.
 
-If no `output_path` is provided, default to `examples/<project>_report.md`
+If no `output_path` is provided, default to `reports/<project>_report.md`
 (ask the orchestrator for the project name if unclear).
 
 Your chat response after writing should be a brief confirmation with the
