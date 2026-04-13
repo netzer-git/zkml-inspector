@@ -4,7 +4,7 @@ description: >-
   final Markdown audit report. Use when generating the final output
   report. Triggers: "generate report", "write report", "format findings",
   "final report".
-tools: [read, createFile]
+tools: [read, edit/createFile]
 user-invocable: false
 ---
 

@@ -12,7 +12,7 @@ tools:
   - agent
   - todo
   - web
-  - createFile
+  - edit/createFile
   - pdf-reader/read_pdf
 agents:
   - paper-analyst
