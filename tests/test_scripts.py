@@ -474,6 +474,6 @@ class TestBatchManifest:
         path = ROOT / "examples" / "batch_manifest.json"
         data = json.loads(path.read_text(encoding="utf-8"))
         for entry in data["analyses"]:
-            assert "name" in entry, "Each entry must have 'name'"
+            assert "entry-id" in entry, "Each entry must have 'entry-id'"
             assert "paper" in entry, "Each entry must have 'paper'"
             assert "codebase" in entry, "Each entry must have 'codebase'"

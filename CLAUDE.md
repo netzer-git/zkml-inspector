@@ -88,7 +88,7 @@ Single source of truth — both platforms read from the same files.
 - No references to removed scripts or removed components
 - Content quality: paper-analyst outputs commitment_obligations, code-inspector references soundness_checklist.md, report-writer has dedup logic
 - Batch prompt has resume logic, summary.json output, context compaction, and isolation between entries
-- `examples/batch_manifest.json` is valid JSON with required fields (`name`, `paper`, `codebase`)
+- `examples/batch_manifest.json` is valid JSON with required fields (`entry-id`, `paper`, `codebase`)
 
 `tests/test_claude_commands.py` validates the **Claude Code layer** (`.claude/`):
 - `.claude/commands/analyze-full.md` and `analyze-batch.md` exist with required orchestration elements

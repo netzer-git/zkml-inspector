@@ -20,7 +20,7 @@ The manifest is a JSON file with this structure:
 {
   "analyses": [
     {
-      "name": "zkllm",
+      "entry-id": "zkllm",
       "paper": "./Papers/zkLLM.pdf",
       "codebase": "./Codebases/zkllm-ccs2024/"
     }
@@ -29,7 +29,7 @@ The manifest is a JSON file with this structure:
 }
 ```
 
-- `analyses` — array of entries, each with `name`, `paper`, `codebase`
+- `analyses` — array of entries, each with `entry-id`, `paper`, `codebase`
 - `output_dir` — output folder for reports, relative to the manifest file
 - All paths inside the manifest are **relative to the manifest file's location**
 
@@ -43,7 +43,7 @@ The manifest is a JSON file with this structure:
    missing paths and skip those entries (do not abort the batch).
 5. **Create tasks** — Use the `TaskCreate` tool to create a task list for the
    batch run. Create one task per valid analysis entry (subject format:
-   `Analyze <name> (<i>/<n>)`, e.g. `Analyze zkllm (1/4)`), plus one task
+   `Analyze <entry-id> (<i>/<n>)`, e.g. `Analyze zkllm (1/4)`), plus one task
    for `Generate summary.json` and one for `Print final summary table`.
    Set up `addBlockedBy` dependencies so each analysis task is blocked by the
    previous one, the summary task is blocked by all analysis tasks, and the
@@ -57,8 +57,8 @@ one at a time so each sub-agent gets a clean context.
 
 For **each** entry in the `analyses` array, in order:
 
-1. **Check for existing report** — if `<output_dir>/<name>_report.md` already
-   exists, **skip** this entry and log "Skipping <name> — report already exists".
+1. **Check for existing report** — if `<output_dir>/<entry-id>_report.md` already
+   exists, **skip** this entry and log "Skipping <entry-id> — report already exists".
    Mark its task as `completed` (description: "Skipped — report already exists").
    This enables resume: re-invoking with the same manifest after an interrupted
    batch will pick up where it left off.
@@ -72,7 +72,7 @@ For **each** entry in the `analyses` array, in order:
    entry, providing:
    - `paper` = the entry's absolute paper path
    - `codebase` = the entry's absolute codebase path
-   - `output_path` = `<output_dir>/<name>_report.md`
+   - `output_path` = `<output_dir>/<entry-id>_report.md`
 
    This runs the standard `paper-analyst → code-inspector → report-writer`
    pipeline as defined in `.claude/commands/analyze-full.md`. Do NOT duplicate
@@ -105,12 +105,12 @@ Mark the `Generate summary.json` task as `in_progress` using `TaskUpdate`.
 After **all** entries are complete (or skipped), generate a summary file at
 `<output_dir>/summary.json`.
 
-The summary JSON has one top-level key per analysis `name`. Each key maps to
+The summary JSON has one top-level key per analysis `entry-id`. Each key maps to
 an array of **every deduplicated finding** from that report, using this schema:
 
 ```json
 {
-  "<name>": [
+  "<entry-id>": [
     {
       "name": "1-3 word finding name",
       "severity": "Critical | Warning | Info",
@@ -122,7 +122,7 @@ an array of **every deduplicated finding** from that report, using this schema:
 ```
 
 **Rules for the summary:**
-- Read each `<name>_report.md` to extract findings (do not rely on memory from
+- Read each `<entry-id>_report.md` to extract findings (do not rely on memory from
   Phase 1 — context was compacted).
 - Include **all** deduplicated findings, not just criticals.
 - `severity` must be exactly one of: `Critical`, `Warning`, `Info`.

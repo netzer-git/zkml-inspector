@@ -26,7 +26,7 @@ The manifest is a JSON file with this structure:
 {
   "analyses": [
     {
-      "name": "zkllm",
+      "entry-id": "zkllm",
       "paper": "./Papers/zkLLM.pdf",
       "codebase": "./Codebases/zkllm-ccs2024/"
     }
@@ -35,7 +35,7 @@ The manifest is a JSON file with this structure:
 }
 ```
 
-- `analyses` — array of entries, each with `name`, `paper`, `codebase`
+- `analyses` — array of entries, each with `entry-id`, `paper`, `codebase`
 - `output_dir` — output folder for reports, relative to the manifest file
 - All paths inside the manifest are **relative to the manifest file's location**
 
@@ -55,8 +55,8 @@ The manifest is a JSON file with this structure:
 
 For **each** entry in the `analyses` array, in order:
 
-1. **Check for existing report** — if `<output_dir>/<name>_report.md` already
-   exists, **skip** this entry and log "Skipping <name> — report already exists".
+1. **Check for existing report** — if `<output_dir>/<entry-id>_report.md` already
+   exists, **skip** this entry and log "Skipping <entry-id> — report already exists".
 
 2. **Print progress** — e.g., `[1/4] Analyzing: zkllm`
 
@@ -64,7 +64,7 @@ For **each** entry in the `analyses` array, in order:
    entry, providing:
    - `paper` = the entry's absolute paper path
    - `codebase` = the entry's absolute codebase path
-   - `output_path` = `<output_dir>/<name>_report.md`
+   - `output_path` = `<output_dir>/<entry-id>_report.md`
 
    This runs the standard `paper-analyst → code-inspector → report-writer`
    pipeline as defined in `analyze-full.prompt.md`. Do NOT duplicate the
@@ -90,12 +90,12 @@ For **each** entry in the `analyses` array, in order:
 After **all** entries are complete (or skipped), generate a summary file at
 `<output_dir>/summary.json`.
 
-The summary JSON has one top-level key per analysis `name`. Each key maps to
+The summary JSON has one top-level key per analysis `entry-id`. Each key maps to
 an array of **every deduplicated finding** from that report, using this schema:
 
 ```json
 {
-  "<name>": [
+  "<entry-id>": [
     {
       "name": "1-3 word finding name",
       "severity": "Critical | Warning | Info",
@@ -107,7 +107,7 @@ an array of **every deduplicated finding** from that report, using this schema:
 ```
 
 **Rules for the summary:**
-- Read each `<name>_report.md` to extract findings (do not rely on memory from
+- Read each `<entry-id>_report.md` to extract findings (do not rely on memory from
   Phase 1 — context was compacted).
 - Include **all** deduplicated findings, not just criticals.
 - `severity` must be exactly one of: `Critical`, `Warning`, `Info`.

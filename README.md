@@ -52,8 +52,8 @@ Create a `batch_manifest.json` (see `examples/batch_manifest.json`):
 ```json
 {
   "analyses": [
-    { "name": "ezkl", "paper": "./ezkl/paper.pdf", "codebase": "./ezkl/code/" },
-    { "name": "zkllm", "paper": "./zkllm/paper.tex", "codebase": "./zkllm/src/" }
+    { "entry-id": "ezkl", "paper": "./ezkl/paper.pdf", "codebase": "./ezkl/code/" },
+    { "entry-id": "zkllm", "paper": "./zkllm/paper.tex", "codebase": "./zkllm/src/" }
   ],
   "output_dir": "./reports/v0.1"
 }

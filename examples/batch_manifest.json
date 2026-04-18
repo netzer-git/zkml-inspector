@@ -1,12 +1,12 @@
 {
   "analyses": [
     {
-      "name": "ezkl",
+      "entry-id": "ezkl",
       "paper": "./projects/ezkl/paper.pdf",
       "codebase": "./projects/ezkl/code/"
     },
     {
-      "name": "zkllm",
+      "entry-id": "zkllm",
       "paper": "./projects/zkllm/paper.tex",
       "codebase": "./projects/zkllm/src/"
     }
