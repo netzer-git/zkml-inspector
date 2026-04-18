@@ -29,7 +29,13 @@ in your output — do NOT work around it with scripts or alternative tools.
 
 ## Reference Example
 
-Before writing, read `examples/sample_report.md` for the expected format, tone, and structure.
+Before writing, read `examples/sample_report.md` for the expected
+format, tone, and structure — paying special attention to the trailing
+**Benchmark Findings (machine-readable)** JSON block, which every
+report you produce MUST end with.
+
+Also read `references/benchmark_taxonomy.md` for the closed-list values
+of `category` and `security-concern`.
 
 ## Your Inputs
 
@@ -62,11 +68,14 @@ Generate these sections in order:
 Table showing each commitment obligation from the paper and whether
 the code implements it:
 
-| # | Value | Paper | Code | Status |
-|---|-------|-------|------|--------|
+| # | Value | Paper | Code | Status | Class |
+|---|-------|-------|------|--------|-------|
+
+The `Class` column renders as `category / security-concern` (taken
+verbatim from the code-inspector finding).
 
 ### 3. Operator Coverage Matrix
-Table: Operator | Paper | Code | Status | Implementation | Notes
+Table: Operator | Paper | Code | Status | Implementation | Notes | Class
 
 Status symbols:
 - ✅ `IMPLEMENTED` — matches paper specification
@@ -74,22 +83,34 @@ Status symbols:
 - ❌ `MISSING` — paper specifies it, code doesn't have it
 - ➕ `UNDOCUMENTED` — code has it, paper doesn't mention it
 
+`Class` renders as `category / security-concern`.
+
 ### 4. Soundness Findings
 All findings from the soundness checklist and mock/phantom detection,
-ordered by severity. Each finding must have:
+ordered by severity. Each finding must include:
 - Severity badge
+- **Category** and **Security Concern** (from code-inspector — do not
+  invent)
 - Location(s) (file + line for each entry; "—" if none)
+- **Paper Reference** rendered as `Section X.Y — "<quote>"` (use just
+  `Section X.Y` when the quote is empty; use `—` when no reference applies)
 - What the paper says vs what the code does
 - Impact description
 - Recommendation
+- A `*Why: <one-sentence reasoning>*` italic subline below the finding
+  body when the code-inspector provided `category_reasoning` (or when the
+  classification is `Other`).
 
 ### 5. Protocol Transcript Findings
 Commit-before-challenge violations, missing opening proofs, Fiat-Shamir
 issues. Only include if the code-inspector found protocol transcript issues.
+Use the same field set as Soundness Findings (severity, category,
+security concern, location, paper reference, etc.).
 
 ### 6. Precision Findings
 Fixed-point mismatches, accumulation overflow risks, approximation error
 bound violations. Only include if the code-inspector found precision issues.
+Use the same field set as Soundness Findings.
 
 ### 7. Recommendations
 Grouped by severity:
@@ -98,6 +119,45 @@ Grouped by severity:
 - **Info (Nice to Have)** — best practice improvements
 
 Each recommendation: what to do, where (file + line), and why.
+
+### 8. Benchmark Findings (machine-readable)
+
+A single fenced JSON code block at the very end of the report. This is
+the **canonical extraction source** for the batch artifact — keep it in
+sync with the deduplicated findings rendered above.
+
+Schema: a flat JSON array of finding objects, each with **exactly the
+8 benchmark fields** below (no `entry-id` — the batch step injects it):
+
+```json
+[
+  {
+    "issue-name": "3-7 word title",
+    "issue-explanation": "One paragraph describing root cause and impact.",
+    "severity": "Critical | Warning | Info",
+    "category": "<one of 7 closed-list values, or Other>",
+    "security-concern": "<one of 6 closed-list values, or Other>",
+    "relevant-code": "file.rs:10-20, other.rs:42",
+    "paper-reference": "Section 6.1.3: \"<verbatim quote>\""
+  }
+]
+```
+
+Field mapping from code-inspector finding objects:
+- `issue-name` → the finding's `title` (must be 3–7 words)
+- `issue-explanation` → a one-paragraph synthesis of `paper_says`,
+  `code_does`, and `impact` (do NOT just concatenate them — write a
+  coherent paragraph)
+- `severity` → normalize the code-inspector severity to title case:
+  `CRITICAL`→`Critical`, `WARNING`→`Warning`, `INFO`→`Info`
+- `category` → verbatim from finding (closed list)
+- `security-concern` → verbatim from finding's `security_concern`
+  (closed list; note the field name uses a hyphen here)
+- `relevant-code` → comma-separated `file:line` from the `locations`
+  array; use `""` (empty string) when the array is empty
+- `paper-reference` → render the structured `paper_reference` as
+  `"<section>: \"<quote>\""` when both present, just `"<section>"` when
+  the quote is empty, or `"-"` when no reference applies
 
 ## Rules
 
@@ -153,6 +213,18 @@ file path — do NOT repeat the full report in chat.
   finding explaining the discrepancy and apply the override-corrected
   severity in the report. This is the only case where you may change
   a severity from the code-inspector.
+- **Classification fields**: take `category` and `security_concern`
+  verbatim from each code-inspector finding. Do NOT relabel or invent
+  classifications. If a finding is missing one of these fields, default
+  to `Other` and add a `*Why: <reason>*` italic subline. Strings must
+  match the closed lists in `references/benchmark_taxonomy.md`
+  byte-for-byte.
+- **Benchmark Findings JSON block (mandatory)**: every report ends with
+  the section 8 fenced JSON code block. It must (a) parse as valid JSON,
+  (b) contain exactly the 8 fields per entry, (c) reflect the
+  **deduplicated** finding set, (d) use closed-list values from
+  `references/benchmark_taxonomy.md` byte-for-byte, and (e) carry the
+  `severity` values title-cased (`Critical | Warning | Info`).
 - If findings from different agents conflict, present both perspectives
   and flag the conflict
 - Keep the report readable. Use tables for structured comparisons,

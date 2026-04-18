@@ -50,7 +50,7 @@ The orchestrator never does analysis itself — it validates inputs, dispatches 
 | Prompt | Behavior |
 |--------|----------|
 | `/analyze-full` | Full pipeline, complete report |
-| `/analyze-batch` | Reads `batch_manifest.json`, runs full pipeline per entry, saves reports **next to the manifest** (NOT inside zkml-inspector workspace), produces `summary.json`, supports resume by skipping existing reports |
+| `/analyze-batch` | Reads `batch_manifest.json`, runs full pipeline per entry, saves reports **next to the manifest** (NOT inside zkml-inspector workspace), produces `agent_output.json` (flat array in the zkML-inspector-benchmark schema), supports resume by skipping existing reports |
 
 ### Key constraints
 
@@ -69,6 +69,7 @@ Shared reference files live in the top-level `references/` directory — a singl
 | `soundness_checklist.md` | `references/` | code-inspector, report-writer |
 | `operator_catalog.md` | `references/` | paper-analyst |
 | `approximation_db.md` | `references/` | paper-analyst |
+| `benchmark_taxonomy.md` | `references/` | code-inspector, report-writer |
 
 Single source of truth — both platforms read from the same files.
 
@@ -87,7 +88,7 @@ Single source of truth — both platforms read from the same files.
 - Sub-agents are not user-invocable and don't have `execute` tool
 - No references to removed scripts or removed components
 - Content quality: paper-analyst outputs commitment_obligations, code-inspector references soundness_checklist.md, report-writer has dedup logic
-- Batch prompt has resume logic, summary.json output, context compaction, and isolation between entries
+- Batch prompt has resume logic, agent_output.json output, context compaction, and isolation between entries
 - `examples/batch_manifest.json` is valid JSON with required fields (`entry-id`, `paper`, `codebase`)
 
 `tests/test_claude_commands.py` validates the **Claude Code layer** (`.claude/`):

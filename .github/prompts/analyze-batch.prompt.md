@@ -85,36 +85,70 @@ For **each** entry in the `analyses` array, in order:
 
 6. Move to the next entry.
 
-### Phase 2 — Summary JSON
+### Phase 2 — Benchmark JSON
 
-After **all** entries are complete (or skipped), generate a summary file at
-`<output_dir>/summary.json`.
+After **all** entries are complete (or skipped), generate a single flat
+output file at `<output_dir>/agent_output.json` in the
+zkML-inspector-benchmark schema.
 
-The summary JSON has one top-level key per analysis `entry-id`. Each key maps to
-an array of **every deduplicated finding** from that report, using this schema:
+**Procedure:**
+
+1. For each completed entry, read its `<output_dir>/<entry-id>_report.md`.
+2. Locate the trailing **Benchmark Findings (machine-readable)** fenced
+   JSON code block at the end of the report. Parse it as JSON.
+3. For each finding object in that array, inject `"entry-id":
+   "<entry-id>"` (use the manifest key verbatim, preserving casing).
+   The result is an object with **all 8 required fields**:
+
+   | Field | Source |
+   |-------|--------|
+   | `entry-id` | Manifest key for this entry |
+   | `issue-name` | From the report's Benchmark Findings block |
+   | `issue-explanation` | From the report's Benchmark Findings block |
+   | `severity` | One of `Critical`, `Warning`, `Info` |
+   | `category` | One of the 7 closed-list values + `Other` (see `references/benchmark_taxonomy.md`) |
+   | `security-concern` | One of the 6 closed-list values + `Other` (see `references/benchmark_taxonomy.md`) |
+   | `relevant-code` | Comma-separated `file:line` references, or `""` |
+   | `paper-reference` | Section + optional quote, or `"-"` |
+
+4. **Validate** every finding before adding it to the output array:
+   - All 8 keys present and non-null (empty string is allowed for
+     `relevant-code` only).
+   - `severity` ∈ {`Critical`, `Warning`, `Info`}.
+   - `category` ∈ closed list (see `benchmark_taxonomy.md`).
+   - `security-concern` ∈ closed list (see `benchmark_taxonomy.md`).
+
+   On validation failure: log the offending `entry-id` and finding
+   `issue-name`, then **omit that finding** from the output. Do NOT
+   silently coerce. Do NOT abort the whole batch.
+
+5. **Sort** the final array deterministically for stable diffs:
+   - Primary key: `entry-id` (case-insensitive ASCII order).
+   - Secondary key: `severity` (`Critical` < `Warning` < `Info`).
+   - Tertiary key: `issue-name` (case-insensitive ASCII order).
+
+6. Write the resulting flat JSON array to `<output_dir>/agent_output.json`
+   using `createFile` (pretty-printed with 2-space indent, UTF-8).
+
+7. Do NOT also write the legacy per-entry summary file — that format is
+   removed; only the flat benchmark-schema array is produced.
+
+**Schema reminder — the file is a flat array:**
 
 ```json
-{
-  "<entry-id>": [
-    {
-      "name": "1-3 word finding name",
-      "severity": "Critical | Warning | Info",
-      "explanation": "One sentence explaining the finding.",
-      "location": "file:line — or empty string if not applicable"
-    }
-  ]
-}
+[
+  {
+    "entry-id": "zkllm",
+    "issue-name": "Model Binding",
+    "issue-explanation": "...",
+    "severity": "Critical",
+    "category": "Witness/Commitment Mismatch",
+    "security-concern": "Semantic Subversion (Integrity)",
+    "relevant-code": "proof.cu:3",
+    "paper-reference": "Section 3.3: \"...\""
+  }
+]
 ```
-
-**Rules for the summary:**
-- Read each `<entry-id>_report.md` to extract findings (do not rely on memory from
-  Phase 1 — context was compacted).
-- Include **all** deduplicated findings, not just criticals.
-- `severity` must be exactly one of: `Critical`, `Warning`, `Info`.
-- `explanation` is a single sentence — concise but self-contained.
-- `location` is a code reference like `file.rs:42` or `module.cu:18-23`. Use
-  an empty string `""` when no specific code location applies.
-- Do NOT invent findings — only include what appears in the reports.
 
 ### Phase 3 — Final Summary Table
 
@@ -127,7 +161,7 @@ Print a summary table to the user:
 | ...      | ...                |      ... |     ... |  ... |   ... | ...                   |
 ```
 
-Then confirm: "All reports saved to `<output_dir>/`. Summary at `summary.json`."
+Then confirm: "All reports saved to `<output_dir>/`. Benchmark output at `agent_output.json`."
 
 ## Important Constraints
 

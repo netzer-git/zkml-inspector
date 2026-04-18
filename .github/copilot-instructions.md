@@ -42,7 +42,7 @@ Pipeline: `paper-analyst → code-inspector → report-writer` (strictly sequent
 | Prompt | When | Agents Used |
 |--------|------|-------------|
 | `/analyze-full` | Paper + codebase comparison | All 3 agents |
-| `/analyze-batch` | Multiple papers + codebases from manifest | zkml-inspector → all 3 agents (per entry), then summary JSON |
+| `/analyze-batch` | Multiple papers + codebases from manifest | zkml-inspector → all 3 agents (per entry), then `agent_output.json` (flat benchmark schema) |
 
 ## Build & Test
 
@@ -82,3 +82,4 @@ See `CLAUDE.md` for the full file inventory. Critical references for agent devel
 - `references/soundness_checklist.md` — Soundness audit checklist (code-inspector loads this)
 - `references/operator_catalog.md` — 30+ operators with ZK patterns and gap signatures
 - `references/approximation_db.md` — Approximation strategies with error bounds
+- `references/benchmark_taxonomy.md` — Closed-list `category` and `security_concern` values for benchmark-ready findings

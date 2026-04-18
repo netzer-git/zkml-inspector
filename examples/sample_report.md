@@ -182,3 +182,71 @@ replacement — a significant behavioral change not documented in the paper.
 
 1. **Fold BatchNorm into preceding Linear** — If BatchNorm is added later, fold it to save gates
 2. **Document the ReLU→GELU substitution** — If intentional, add a comment explaining the tradeoff
+
+---
+
+## 8. Benchmark Findings (machine-readable)
+
+A flat JSON array of every deduplicated finding above, in the
+zkML-inspector-benchmark schema. The batch step (`/analyze-batch`) parses
+this block, injects the manifest's `entry-id`, and concatenates entries
+into `agent_output.json`.
+
+```json
+[
+  {
+    "issue-name": "LayerNorm Missing",
+    "issue-explanation": "The paper specifies LayerNorm in §3.3 with Newton's-method reciprocal square root and a 256-entry lookup, but the implementation has no LayerNorm operator at all. Without normalization constraints, a malicious prover can skip the layer entirely and substitute arbitrary normalized values, breaking the inference relation the verifier accepts.",
+    "severity": "Critical",
+    "category": "Specification Mismatch",
+    "security-concern": "Semantic Subversion (Integrity)",
+    "relevant-code": "",
+    "paper-reference": "Section 3.3"
+  },
+  {
+    "issue-name": "Bias vectors uncommitted",
+    "issue-explanation": "The paper commits weights via Poseidon (§5) but the implementation only commits weight matrices, never bias vectors. An uncommitted bias lets the prover shift each layer's output by an arbitrary constant per proof, so the verifier cannot bind the proof to a fixed model.",
+    "severity": "Critical",
+    "category": "Witness/Commitment Mismatch",
+    "security-concern": "Semantic Subversion (Integrity)",
+    "relevant-code": "src/commitment.rs:30, src/model/weights.rs:72",
+    "paper-reference": "Section 5"
+  },
+  {
+    "issue-name": "Dropout in proof path",
+    "issue-explanation": "A dropout layer with non-zero probability is still active in the forward pass that feeds the circuit. Non-deterministic operations make the witness unreproducible and let the prover choose values that pass verification non-uniformly.",
+    "severity": "Critical",
+    "category": "Under-constrained Circuit",
+    "security-concern": "Proof Forgery (Soundness)",
+    "relevant-code": "src/model/transformer.rs:42",
+    "paper-reference": "-"
+  },
+  {
+    "issue-name": "Softmax under-segmented",
+    "issue-explanation": "The paper specifies an 8-segment piecewise-linear Softmax with worst-case error 0.01, but the code uses only 3 segments (~0.05 error). The proof attests to a coarser approximation than the paper's stated bound covers.",
+    "severity": "Warning",
+    "category": "Numerical/Quantization Bug",
+    "security-concern": "Semantic Subversion (Integrity)",
+    "relevant-code": "src/ops/softmax.rs:12",
+    "paper-reference": "Section 3.2: \"K = 8 piecewise-linear segments yield epsilon <= 0.01.\""
+  },
+  {
+    "issue-name": "GELU replaced by ReLU",
+    "issue-explanation": "The paper's GELU activation (§3.4) is implemented as a ReLU drop-in. ReLU is exact and cheaper but encodes a different function, so the proof attests to a different model than the paper claims.",
+    "severity": "Warning",
+    "category": "Specification Mismatch",
+    "security-concern": "Semantic Subversion (Integrity)",
+    "relevant-code": "src/ops/relu.rs:1",
+    "paper-reference": "Section 3.4"
+  },
+  {
+    "issue-name": "Fixed-point precision low",
+    "issue-explanation": "The paper specifies 16-bit fixed-point with 8 fractional bits; the code uses 12-bit with 6 fractional bits. The 4-bit precision gap propagates into Softmax and other normalizations whose error analyses assume the larger scale.",
+    "severity": "Warning",
+    "category": "Numerical/Quantization Bug",
+    "security-concern": "Semantic Subversion (Integrity)",
+    "relevant-code": "src/config.rs",
+    "paper-reference": "Section 6.1"
+  }
+]
+```
