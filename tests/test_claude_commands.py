@@ -184,10 +184,28 @@ class TestAnalyzeBatchContent:
     def test_has_arguments_placeholder(self) -> None:
         assert "$ARGUMENTS" in self.text, "analyze-batch.md must reference $ARGUMENTS"
 
-    def test_has_summary_json(self) -> None:
-        assert "summary.json" in self.text, (
-            "analyze-batch.md must describe summary.json generation"
+    def test_has_agent_output_json(self) -> None:
+        assert "agent_output.json" in self.text, (
+            "analyze-batch.md must describe agent_output.json generation"
         )
+        assert "summary.json" not in self.text, (
+            "analyze-batch.md must no longer reference the legacy summary.json output"
+        )
+
+    def test_has_benchmark_schema_fields(self) -> None:
+        for field in [
+            "entry-id",
+            "issue-name",
+            "issue-explanation",
+            "severity",
+            "category",
+            "security-concern",
+            "relevant-code",
+            "paper-reference",
+        ]:
+            assert field in self.text, (
+                f"analyze-batch.md must reference benchmark field '{field}'"
+            )
 
     def test_has_resume_logic(self) -> None:
         assert "resume" in self.text.lower() or "skip" in self.text.lower(), (

@@ -120,7 +120,8 @@ references/                        # Shared ZKP knowledge base (used by both pla
 ├── zkp_foundations.md
 ├── operator_catalog.md
 ├── soundness_checklist.md
-└── approximation_db.md
+├── approximation_db.md
+└── benchmark_taxonomy.md
 ```
 
 ## License

@@ -46,6 +46,7 @@ EXPECTED_REFERENCES = [
     "operator_catalog.md",
     "soundness_checklist.md",
     "approximation_db.md",
+    "benchmark_taxonomy.md",
 ]
 
 
@@ -289,10 +290,44 @@ class TestAgentContent:
             "code-inspector should reference soundness_checklist.md"
         )
 
+    def test_code_inspector_references_benchmark_taxonomy(self) -> None:
+        """code-inspector must reference benchmark_taxonomy.md and require classification."""
+        text = (AGENTS_DIR / "code-inspector.agent.md").read_text(encoding="utf-8")
+        assert "benchmark_taxonomy.md" in text, (
+            "code-inspector should reference benchmark_taxonomy.md"
+        )
+        assert '"category"' in text and '"security_concern"' in text, (
+            "code-inspector output schema must include category and security_concern"
+        )
+        assert '"paper_reference"' in text, (
+            "code-inspector output schema must include structured paper_reference"
+        )
+
     def test_report_writer_has_dedup_rule(self) -> None:
         text = (AGENTS_DIR / "report-writer.agent.md").read_text(encoding="utf-8")
         assert "eduplicate" in text.lower(), (
             "report-writer should have a finding deduplication rule"
+        )
+
+    def test_report_writer_has_benchmark_findings_section(self) -> None:
+        """report-writer must produce a trailing Benchmark Findings JSON block."""
+        text = (AGENTS_DIR / "report-writer.agent.md").read_text(encoding="utf-8")
+        assert "Benchmark Findings" in text, (
+            "report-writer should describe a Benchmark Findings (machine-readable) section"
+        )
+        for field in [
+            "issue-name",
+            "issue-explanation",
+            "category",
+            "security-concern",
+            "relevant-code",
+            "paper-reference",
+        ]:
+            assert field in text, (
+                f"report-writer Benchmark Findings schema must mention '{field}'"
+            )
+        assert "benchmark_taxonomy.md" in text, (
+            "report-writer should reference benchmark_taxonomy.md for closed-list values"
         )
 
     def test_report_writer_has_file_output_instructions(self) -> None:
@@ -380,6 +415,30 @@ class TestReferenceContent:
                 f"{filename} contains EZKL-specific mention — should be framework-agnostic"
             )
 
+    def test_benchmark_taxonomy_has_required_categories(self) -> None:
+        """benchmark_taxonomy.md must enumerate every closed-list category and concern."""
+        text = (REFERENCES_DIR / "benchmark_taxonomy.md").read_text(encoding="utf-8")
+        categories = [
+            "Under-constrained Circuit",
+            "Protocol/Transcript Logic",
+            "Specification Mismatch",
+            "Numerical/Quantization Bug",
+            "Witness/Commitment Mismatch",
+            "Engineering/Prototype Gap",
+        ]
+        for cat in categories:
+            assert cat in text, f"benchmark_taxonomy.md missing category '{cat}'"
+        concerns = [
+            "Proof Forgery (Soundness)",
+            "Information Leakage (Privacy)",
+            "Semantic Subversion (Integrity)",
+            "Proof Malleability",
+            "Denial of Proof (Reliability)",
+            "Governance Bypass",
+        ]
+        for sc in concerns:
+            assert sc in text, f"benchmark_taxonomy.md missing security concern '{sc}'"
+
 
 # ============================================================================
 # Cross-consistency tests
@@ -424,12 +483,33 @@ class TestBatchPrompt:
             "analyze-batch should describe resume/skip behavior"
         )
 
-    def test_batch_prompt_has_summary_json(self) -> None:
-        """Batch prompt must describe summary.json generation."""
+    def test_batch_prompt_has_agent_output_json(self) -> None:
+        """Batch prompt must describe agent_output.json (benchmark-schema) generation."""
         text = (PROMPTS_DIR / "analyze-batch.prompt.md").read_text(encoding="utf-8")
-        assert "summary.json" in text, (
-            "analyze-batch should describe summary.json output"
+        assert "agent_output.json" in text, (
+            "analyze-batch should describe agent_output.json output"
         )
+        # Old summary.json schema must be gone
+        assert "summary.json" not in text, (
+            "analyze-batch should no longer reference the legacy summary.json output"
+        )
+
+    def test_batch_prompt_has_benchmark_schema_fields(self) -> None:
+        """Batch prompt must mention the 8 required benchmark fields."""
+        text = (PROMPTS_DIR / "analyze-batch.prompt.md").read_text(encoding="utf-8")
+        for field in [
+            "entry-id",
+            "issue-name",
+            "issue-explanation",
+            "severity",
+            "category",
+            "security-concern",
+            "relevant-code",
+            "paper-reference",
+        ]:
+            assert field in text, (
+                f"analyze-batch must reference benchmark field '{field}'"
+            )
 
     def test_batch_prompt_has_context_compaction(self) -> None:
         """Batch prompt must describe context compaction between entries."""

@@ -100,6 +100,14 @@ The report-writer will produce a Markdown report covering:
 - Protocol Transcript Findings (if any)
 - Precision Findings (if any)
 - Recommendations (prioritized by severity: CRITICAL -> WARNING -> INFO)
+- **Benchmark Findings (machine-readable)** — a single fenced JSON code
+  block at the end with the deduplicated findings in the 8-field
+  benchmark schema. Required on every report.
+
+Note: every finding flows from code-inspector with `category` and
+`security_concern` already assigned (per
+`references/benchmark_taxonomy.md`); report-writer only renders these
+verbatim.
 
 The report-writer uses the Write tool to save the report to disk.
 

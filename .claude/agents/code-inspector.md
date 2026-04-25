@@ -36,6 +36,7 @@ in your output — do NOT work around it with scripts or alternative tools.
 **Before analysis, read these shared reference files:**
 - `references/zkp_foundations.md` — ZKP lifecycle, security properties, constraint derivation, protocol transcript integrity
 - `references/soundness_checklist.md` — 42+ soundness checks (CHECK-x.x IDs) with severity override rules
+- `references/benchmark_taxonomy.md` — closed-list values for the `category` and `security_concern` fields you must put on every finding
 
 ## Your Inputs
 
@@ -180,6 +181,51 @@ Before outputting, re-read the **Severity Override Rules** at the end of
 This phase is **not optional**. Skipping it is the most common source of
 severity misclassification.
 
+### Phase 8: Classification (mandatory — run after severity validation)
+
+For **every** finding (commitment, operator, soundness, protocol,
+precision), assign two closed-list classification fields used by the
+downstream batch artifact:
+
+1. `category` — one of the 8 values in `references/benchmark_taxonomy.md`
+   (`Under-constrained Circuit`, `Protocol/Transcript Logic`,
+   `Specification Mismatch`, `Numerical/Quantization Bug`,
+   `Witness/Commitment Mismatch`, `Engineering/Prototype Gap`, `Other`).
+2. `security_concern` — one of the 7 values in
+   `references/benchmark_taxonomy.md` (`Proof Forgery (Soundness)`,
+   `Information Leakage (Privacy)`,
+   `Semantic Subversion (Integrity)`, `Proof Malleability`,
+   `Denial of Proof (Reliability)`, `Governance Bypass`, `Other`).
+
+Procedure:
+
+1. Walk the decision tree at the top of `benchmark_taxonomy.md`.
+2. Consult the per-section default mapping tables (soundness checklist,
+   operator coverage, commitment audit, protocol transcript, precision)
+   when the finding fits a known pattern — use the default unless the
+   specifics call for a different choice.
+3. Strings must match the closed lists **byte-for-byte**
+   (capitalization, punctuation, parentheses included).
+4. When borderline, prefer the **highest-impact** classification
+   (e.g. `Proof Forgery` over `Semantic Subversion` when a malicious
+   prover can use the gap to forge).
+5. If absolutely nothing fits, set the field to `Other` AND record a
+   one-sentence justification in `category_reasoning`. Use `Other`
+   sparingly; the grader scores it as a fallback.
+6. Also fill in a structured `paper_reference` object: `{ "section":
+   "Section X.Y" | "Protocol N" | "Theorem N" | "Eq. N" | "-",
+   "quote": "..." }`. The `quote` is a short verbatim claim from the
+   paper when available; use `""` if not. The existing `paper_says`
+   prose stays as a free-form summary; `paper_reference` is the
+   canonical citation downstream agents will render.
+7. Ensure every finding has a non-empty `title` field (some finding
+   types historically used `value` or `operator` instead — add an
+   explicit `title` so report-writer can emit a clean issue name).
+
+This phase is **not optional**. Findings that lack `category`,
+`security_concern`, `paper_reference`, or `title` will be rejected by
+the batch extractor.
+
 ## Output Format
 
 Before finalizing your output, merge findings that share a root cause into
@@ -188,7 +234,10 @@ security-relevant observations — do not report correct implementations
 unless they are noteworthy (e.g., a Transformer Killer op that is correctly
 constrained).
 
-Return a structured audit report:
+Return a structured audit report. **Every finding** (in any of the
+sub-arrays) MUST include `title`, `category`, `security_concern`,
+`paper_reference` (structured `{section, quote}`), and may include
+`category_reasoning` when the classification is non-obvious or `Other`:
 
 ```json
 {
@@ -202,11 +251,19 @@ Return a structured audit report:
   "commitment_audit": [
     {
       "id": "CA-1",
+      "title": "Weight matrix W_i not committed",
       "value": "weight matrix W_i",
       "status": "COMMITTED | MISSING | PARTIAL | MOCK",
       "severity": "CRITICAL",
+      "category": "Witness/Commitment Mismatch",
+      "security_concern": "Semantic Subversion (Integrity)",
+      "category_reasoning": "Uncommitted weights let the prover swap models between proofs.",
       "paper_says": "Section 5: weights committed via Poseidon hash",
-      "code_does": "weights are Poseidon-hashed into instance column",
+      "paper_reference": {
+        "section": "Section 5",
+        "quote": "Prior to proving, P commits to the model parameters W and sends the digest to V."
+      },
+      "code_does": "weights are loaded from disk and never hashed",
       "locations": [
         { "file": "src/commitment.rs", "line": 45 }
       ],
@@ -216,10 +273,17 @@ Return a structured audit report:
   "operator_coverage": [
     {
       "id": "OP-1",
+      "title": "Softmax under-segmented",
       "operator": "Softmax",
       "status": "IMPLEMENTED | MISSING | MISMATCH | SUBSTITUTION | UNDOCUMENTED",
       "severity": "WARNING",
+      "category": "Numerical/Quantization Bug",
+      "security_concern": "Semantic Subversion (Integrity)",
       "paper_says": "Section 3.2: 8-segment piecewise-linear, error <= 0.01",
+      "paper_reference": {
+        "section": "Section 3.2",
+        "quote": "We approximate Softmax with an 8-segment piecewise-linear interpolant whose worst-case error is bounded by 0.01."
+      },
       "code_does": "3-segment piecewise-linear",
       "locations": [
         { "file": "src/ops/softmax.rs", "line": 12 }
@@ -233,10 +297,16 @@ Return a structured audit report:
   "soundness_findings": [
     {
       "id": "SF-1",
+      "title": "Wire disconnect between layer 3 and layer 4",
       "check": "CHECK-2.2",
       "severity": "CRITICAL",
-      "title": "Wire disconnect between layer 3 and layer 4",
+      "category": "Under-constrained Circuit",
+      "security_concern": "Proof Forgery (Soundness)",
       "paper_says": "All layer outputs feed into next layer (implicit)",
+      "paper_reference": {
+        "section": "Section 4.1",
+        "quote": ""
+      },
       "code_does": "layer 3 output uses wire w_42, layer 4 input uses w_99",
       "locations": [
         { "file": "src/circuit.rs", "line": 120 },
@@ -249,10 +319,16 @@ Return a structured audit report:
   "protocol_transcript_findings": [
     {
       "id": "PT-1",
+      "title": "Sumcheck round 2 challenge precedes commitment",
       "sub_protocol": "sumcheck round 2",
       "severity": "CRITICAL",
-      "title": "Prover value not committed before challenge",
+      "category": "Protocol/Transcript Logic",
+      "security_concern": "Proof Forgery (Soundness)",
       "paper_says": "Section 4: prover commits h(X) before receiving challenge r",
+      "paper_reference": {
+        "section": "Protocol 2 Step 3",
+        "quote": "V sends challenge r only after receiving commitments to w and aux."
+      },
       "code_does": "h(X) computed after challenge r is derived",
       "locations": [
         { "file": "src/prove.rs", "line": 88 }
@@ -264,10 +340,17 @@ Return a structured audit report:
   "precision_findings": [
     {
       "id": "PF-1",
-      "severity": "WARNING",
       "title": "Insufficient precision for Softmax",
+      "severity": "WARNING",
+      "category": "Numerical/Quantization Bug",
+      "security_concern": "Semantic Subversion (Integrity)",
       "paper_says": "16-bit fixed-point (8 fractional bits)",
+      "paper_reference": {
+        "section": "Section 6.1",
+        "quote": "All experiments use a 12-bit fractional scale."
+      },
       "code_does": "12-bit fixed-point (6 fractional bits)",
+      "locations": [],
       "impact": "4-bit precision loss; Softmax exp() is sensitive to precision",
       "recommendation": "Increase to 16-bit as specified in paper"
     }
@@ -294,6 +377,11 @@ Return a structured audit report:
   malicious prover could exploit it to produce a false proof, it's CRITICAL.
 - Your findings ARE the audit. Be precise, cite file+line locations, and
   provide actionable recommendations.
+- **Every finding MUST carry**: `title`, `severity`, `category`,
+  `security_concern`, `paper_reference` (`{section, quote}`), and
+  `locations` (possibly empty). Use closed-list values from
+  `references/benchmark_taxonomy.md` byte-for-byte; fall back to `Other`
+  with a `category_reasoning` only when nothing else fits.
 - If the codebase is very large (>1000 files), use the paper manifest to
   focus on relevant files. Don't scan everything.
 
