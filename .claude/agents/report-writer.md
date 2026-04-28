@@ -126,17 +126,22 @@ A single fenced JSON code block at the very end of the report. This is
 the **canonical extraction source** for the batch artifact — keep it in
 sync with the deduplicated findings rendered above.
 
+**CRITICAL-ONLY FILTER:** Only findings with severity CRITICAL are
+included in this JSON block. WARNING and INFO findings appear in the
+human-readable report sections above but are **excluded** from the
+benchmark JSON. The `severity` field is omitted from the schema — all
+emitted findings are implicitly Critical.
+
 Schema: a flat JSON array of finding objects, each with **exactly the
-8 benchmark fields** below (no `entry-id` — the batch step injects it):
+4 benchmark fields** below (no `entry-id` — the batch step injects it;
+no `severity` — all findings are Critical;
+no `category` or `security-concern` — not graded):
 
 ```json
 [
   {
     "issue-name": "3-7 word title",
     "issue-explanation": "One paragraph describing root cause and impact.",
-    "severity": "Critical | Warning | Info",
-    "category": "<one of 7 closed-list values, or Other>",
-    "security-concern": "<one of 6 closed-list values, or Other>",
     "relevant-code": "file.rs:10-20, other.rs:42",
     "paper-reference": "Section 6.1.3: \"<verbatim quote>\""
   }
@@ -148,11 +153,6 @@ Field mapping from code-inspector finding objects:
 - `issue-explanation` → a one-paragraph synthesis of `paper_says`,
   `code_does`, and `impact` (do NOT just concatenate them — write a
   coherent paragraph)
-- `severity` → normalize the code-inspector severity to title case:
-  `CRITICAL`→`Critical`, `WARNING`→`Warning`, `INFO`→`Info`
-- `category` → verbatim from finding (closed list)
-- `security-concern` → verbatim from finding's `security_concern`
-  (closed list; note the field name uses a hyphen here)
 - `relevant-code` → comma-separated `file:line` from the `locations`
   array; use `""` (empty string) when the array is empty
 - `paper-reference` → render the structured `paper_reference` as
@@ -221,10 +221,10 @@ file path — do NOT repeat the full report in chat.
   byte-for-byte.
 - **Benchmark Findings JSON block (mandatory)**: every report ends with
   the section 8 fenced JSON code block. It must (a) parse as valid JSON,
-  (b) contain exactly the 8 fields per entry, (c) reflect the
-  **deduplicated** finding set, (d) use closed-list values from
-  `references/benchmark_taxonomy.md` byte-for-byte, and (e) carry the
-  `severity` values title-cased (`Critical | Warning | Info`).
+  (b) contain exactly the 4 fields per entry (no `severity`, `category`,
+  or `security-concern`),
+  (c) include **only CRITICAL-severity findings** (skip WARNING and INFO),
+  (d) reflect the **deduplicated** finding set.
 - If findings from different agents conflict, present both perspectives
   and flag the conflict
 - Keep the report readable. Use tables for structured comparisons,

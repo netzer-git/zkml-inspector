@@ -495,15 +495,12 @@ class TestBatchPrompt:
         )
 
     def test_batch_prompt_has_benchmark_schema_fields(self) -> None:
-        """Batch prompt must mention the 8 required benchmark fields."""
+        """Batch prompt must mention the 5 required benchmark fields."""
         text = (PROMPTS_DIR / "analyze-batch.prompt.md").read_text(encoding="utf-8")
         for field in [
             "entry-id",
             "issue-name",
             "issue-explanation",
-            "severity",
-            "category",
-            "security-concern",
             "relevant-code",
             "paper-reference",
         ]:

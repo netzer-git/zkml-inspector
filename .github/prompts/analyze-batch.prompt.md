@@ -98,25 +98,19 @@ zkML-inspector-benchmark schema.
    JSON code block at the end of the report. Parse it as JSON.
 3. For each finding object in that array, inject `"entry-id":
    "<entry-id>"` (use the manifest key verbatim, preserving casing).
-   The result is an object with **all 8 required fields**:
+   The result is an object with **all 5 required fields**:
 
    | Field | Source |
    |-------|--------|
    | `entry-id` | Manifest key for this entry |
    | `issue-name` | From the report's Benchmark Findings block |
    | `issue-explanation` | From the report's Benchmark Findings block |
-   | `severity` | One of `Critical`, `Warning`, `Info` |
-   | `category` | One of the 7 closed-list values + `Other` (see `references/benchmark_taxonomy.md`) |
-   | `security-concern` | One of the 6 closed-list values + `Other` (see `references/benchmark_taxonomy.md`) |
    | `relevant-code` | Comma-separated `file:line` references, or `""` |
    | `paper-reference` | Section + optional quote, or `"-"` |
 
 4. **Validate** every finding before adding it to the output array:
-   - All 8 keys present and non-null (empty string is allowed for
+   - All 5 keys present and non-null (empty string is allowed for
      `relevant-code` only).
-   - `severity` ∈ {`Critical`, `Warning`, `Info`}.
-   - `category` ∈ closed list (see `benchmark_taxonomy.md`).
-   - `security-concern` ∈ closed list (see `benchmark_taxonomy.md`).
 
    On validation failure: log the offending `entry-id` and finding
    `issue-name`, then **omit that finding** from the output. Do NOT
@@ -124,8 +118,7 @@ zkML-inspector-benchmark schema.
 
 5. **Sort** the final array deterministically for stable diffs:
    - Primary key: `entry-id` (case-insensitive ASCII order).
-   - Secondary key: `severity` (`Critical` < `Warning` < `Info`).
-   - Tertiary key: `issue-name` (case-insensitive ASCII order).
+   - Secondary key: `issue-name` (case-insensitive ASCII order).
 
 6. Write the resulting flat JSON array to `<output_dir>/agent_output.json`
    using `createFile` (pretty-printed with 2-space indent, UTF-8).
@@ -141,9 +134,6 @@ zkML-inspector-benchmark schema.
     "entry-id": "zkllm",
     "issue-name": "Model Binding",
     "issue-explanation": "...",
-    "severity": "Critical",
-    "category": "Witness/Commitment Mismatch",
-    "security-concern": "Semantic Subversion (Integrity)",
     "relevant-code": "proof.cu:3",
     "paper-reference": "Section 3.3: \"...\""
   }

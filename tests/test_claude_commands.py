@@ -197,9 +197,6 @@ class TestAnalyzeBatchContent:
             "entry-id",
             "issue-name",
             "issue-explanation",
-            "severity",
-            "category",
-            "security-concern",
             "relevant-code",
             "paper-reference",
         ]:
