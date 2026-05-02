@@ -89,14 +89,14 @@ For **each** entry in the `analyses` array, in order:
 
 After **all** entries are complete (or skipped), generate a single flat
 output file at `<output_dir>/agent_output.json` in the
-zkML-inspector-benchmark schema.
+zkML-inspector-benchmark schema for Critical findings only.
 
 **Procedure:**
 
 1. For each completed entry, read its `<output_dir>/<entry-id>_report.md`.
 2. Locate the trailing **Benchmark Findings (machine-readable)** fenced
    JSON code block at the end of the report. Parse it as JSON.
-3. For each finding object in that array, inject `"entry-id":
+3. For each Critical finding object in that array, inject `"entry-id":
    "<entry-id>"` (use the manifest key verbatim, preserving casing).
    The result is an object with **all 5 required fields**:
 
@@ -139,6 +139,9 @@ zkML-inspector-benchmark schema.
   }
 ]
 ```
+
+You should NEVER include any findings from Warning or Info categories in this output — only Critical findings are benchmarked.
+Part of the report-writer agent is to filter out non-Critical findings from the benchmark JSON block, so if you see any Warning or Info findings in that block, remove it.
 
 ### Phase 3 — Final Summary Table
 
