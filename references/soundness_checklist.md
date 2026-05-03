@@ -60,7 +60,9 @@ against a paper manifest.
   discarded proofs) are CRITICAL — they break soundness. Mock **test data**
   (placeholder weights, random inputs) processed through a real, working
   circuit are WARNING — the proof mechanism is sound, only the model is a
-  test model.
+  test model. However, if mock data is the **only** data ever used and no
+  real proof of soundness was ever produced, escalate to CRITICAL — the
+  system never demonstrated that its proofs are valid.
 
 ---
 
@@ -150,10 +152,14 @@ against a paper manifest.
 | WARNING  | May affect accuracy or security in edge cases | Should fix; document exceptions |
 | INFO     | Best practice, not a security issue | Recommended improvement |
 
+**Borderline rule**: When a finding could reasonably be WARNING or CRITICAL,
+prefer CRITICAL. Err on the side of caution — under-flagging a soundness
+issue is worse than over-flagging it.
+
 ---
 
 ### Severity Override Rules
 - **Fiat-Shamir**: Missing Fiat-Shamir implementation is **WARNING** (see CHECK-5.2). Only CRITICAL if the protocol fundamentally cannot support it.
-- **Mock data vs mock crypto**: Placeholder test data (random weights, dummy inputs) through a working circuit is **WARNING**. Mock crypto operations (empty prove/commit) are CRITICAL (see CHECK-2.5).
+- **Mock data vs mock crypto**: Placeholder test data (random weights, dummy inputs) through a working circuit is **WARNING** — but only if a real, working proof is still produced. If mock data means soundness was never actually demonstrated (no real proof was ever generated), escalate to **CRITICAL** (see CHECK-2.5). Mock crypto operations (empty prove/commit) are always CRITICAL.
 - **Omitted Operator Proofs**: If the paper omits proofs for operators not in its main focus, flag their absence as **WARNING**.
 - **Prototype gaps**: Features marked TODO, "for simplicity", or not in the paper's core contribution are **WARNING**, not CRITICAL.

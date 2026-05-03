@@ -92,8 +92,21 @@ ordered by severity. Each finding must include:
 - **Category** and **Security Concern** (from code-inspector — do not
   invent)
 - Location(s) (file + line for each entry; "—" if none)
-- **Paper Reference** rendered as `Section X.Y — "<quote>"` (use just
-  `Section X.Y` when the quote is empty; use `—` when no reference applies)
+- **Paper Reference** rendered as `Section X.Y — "<verbatim quote ≥15 words>"`.
+  - The quote must be **verbatim** — copied word-for-word from the paper.
+  - The quote must be **≥ 15 words** so the grader's quote-similarity
+    backend has enough text to score against.
+  - Use **only** the section anchor (e.g. `Section 4.2`) without a quote
+    when, and only when, no verbatim sentence in the paper supports the
+    finding (rare). Do NOT paraphrase or summarize — either quote or omit.
+  - Use `—` only when the finding has no paper anchor at all (e.g.
+    pure engineering gaps with `paper_reference == null`).
+  - **Every finding MUST have a paper reference.** If a finding arrives
+    without one, add a `Missing paper reference` note to flag the gap
+    rather than silently rendering `—`.
+  - Prefer Theorem/Definition/Protocol/Equation anchors (e.g.
+    `Theorem 1: "..."`, `Protocol 2 Step 3: "..."`) when the paper
+    states the obligation in those forms — the grader recognizes them.
 - What the paper says vs what the code does
 - Impact description
 - Recommendation
@@ -156,8 +169,22 @@ Field mapping from code-inspector finding objects:
 - `relevant-code` → comma-separated `file:line` from the `locations`
   array; use `""` (empty string) when the array is empty
 - `paper-reference` → render the structured `paper_reference` as
-  `"<section>: \"<quote>\""` when both present, just `"<section>"` when
-  the quote is empty, or `"-"` when no reference applies
+  `"<section>: \"<verbatim quote>\""` whenever a quote exists. The
+  quote MUST be **verbatim** (no paraphrase), at least **15 words long**,
+  and copied directly from the paper. If the paper-analyst did not supply
+  a quote, propagate just `"<section>"` (still a real section anchor —
+  not a paraphrase). Use `"-"` **only** when the finding has no paper
+  reference at all (`paper_reference: null`). Do NOT compress section
+  anchors (no `"Section 4"` if the paper-analyst gave `"Section 4.2.1"`)
+  — the grader rewards exact-section matches.
+
+**Quality bar for `paper-reference`:** the grader scores this field on
+(a) section/anchor match against ground truth and (b) LLM quote-passage
+similarity. A short or paraphrased quote scores poorly even when the
+finding is correct. Aim for: full sentence (15–40 words), copy-pasted
+from the paper, double-quoted, with the structured anchor before the
+colon. Theorem/Protocol/Equation anchors (recognized by the grader's
+regex) are preferred over a bare `Section N` when applicable.
 
 ## Rules
 
@@ -212,7 +239,10 @@ file path — do NOT repeat the full report in chat.
   If a severity violates an override rule, add a "Severity Note" to the
   finding explaining the discrepancy and apply the override-corrected
   severity in the report. This is the only case where you may change
-  a severity from the code-inspector.
+  a severity from the code-inspector. When a finding is borderline
+  between WARNING and CRITICAL, keep CRITICAL — the system prefers
+  caution. If mock data means soundness was never actually demonstrated,
+  maintain CRITICAL.
 - **Classification fields**: take `category` and `security_concern`
   verbatim from each code-inspector finding. Do NOT relabel or invent
   classifications. If a finding is missing one of these fields, default
@@ -224,7 +254,12 @@ file path — do NOT repeat the full report in chat.
   (b) contain exactly the 4 fields per entry (no `severity`, `category`,
   or `security-concern`),
   (c) include **only CRITICAL-severity findings** (skip WARNING and INFO),
-  (d) reflect the **deduplicated** finding set.
+  (d) reflect the **deduplicated** finding set,
+  (e) carry a verbatim `paper-reference` quote of ≥15 words for every
+  finding whose `paper_reference` field is non-null in the code-inspector
+  output. Drop the surrounding double quotes only when no quote was
+  supplied. The literal value `"-"` is reserved for findings with no
+  paper reference at all.
 - If findings from different agents conflict, present both perspectives
   and flag the conflict
 - Keep the report readable. Use tables for structured comparisons,

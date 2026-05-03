@@ -125,6 +125,9 @@ Key checks to always perform:
   - **Important**: Distinguish mock **crypto** (CRITICAL) from mock **test data**.
     Placeholder weights or random inputs processed through a real circuit are
     WARNING — the proof mechanism is sound, only the model is a test model.
+    However, if mock data is the **only** data ever used and no real proof of
+    soundness was produced, escalate to CRITICAL — the system never
+    demonstrated that its proofs are valid.
 
 ### Phase 5: Protocol Transcript Audit
 
@@ -162,9 +165,12 @@ Before outputting, re-read the **Severity Override Rules** at the end of
    specific cases here.
 2. If an override applies and the finding's current severity is higher,
    **downgrade** it and add a note: `"severity_override": "<rule applied>"`
-3. If no override applies and a malicious prover could exploit the gap to
+3. **Borderline rule**: If a finding could reasonably be WARNING or
+   CRITICAL, prefer CRITICAL. Err on the side of caution — under-flagging
+   a soundness issue is worse than over-flagging it.
+4. If no override applies and a malicious prover could exploit the gap to
    produce a false proof, confirm CRITICAL.
-4. Log the override check result for each finding (even if severity is
+5. Log the override check result for each finding (even if severity is
    unchanged) so the report-writer can audit your reasoning.
 
 This phase is **not optional**. Skipping it is the most common source of
@@ -203,10 +209,24 @@ Procedure:
    sparingly; the grader scores it as a fallback.
 6. Also fill in a structured `paper_reference` object: `{ "section":
    "Section X.Y" | "Protocol N" | "Theorem N" | "Eq. N" | "-",
-   "quote": "..." }`. The `quote` is a short verbatim claim from the
-   paper when available; use `""` if not. The existing `paper_says`
-   prose stays as a free-form summary; `paper_reference` is the
-   canonical citation downstream agents will render.
+   "quote": "..." }`. **Copy the paper-analyst's `paper_reference`
+   verbatim** — the paper-analyst already produced a `section_anchor`
+   plus a ≥15-word `verbatim_quote` for every operator, commitment
+   obligation, soundness claim, and protocol round. Map
+   `section_anchor` → `section` and `verbatim_quote` → `quote`
+   character-for-character. Do NOT shorten, paraphrase, or substitute a
+   different sentence. If the paper-analyst gave `null` for the quote
+   (the obligation has no paper sentence to anchor it), set
+   `quote: ""`. The existing `paper_says` prose stays as a free-form
+   summary; `paper_reference` is the canonical citation downstream
+   agents will render. The benchmark grader scores it on (a) exact
+   anchor match and (b) LLM passage similarity — a paraphrased or
+   truncated quote scores poorly even when the finding is correct.
+   **Every finding MUST have a non-empty `paper_reference`**. If the
+   paper-analyst did not supply one for a particular claim, search the
+   paper manifest for the closest relevant section and supply it.
+   Use `"-"` only as an absolute last resort for pure engineering gaps
+   with zero connection to any paper claim.
 7. Ensure every finding has a non-empty `title` field (some finding
    types historically used `value` or `operator` instead — add an
    explicit `title` so report-writer can emit a clean issue name).
