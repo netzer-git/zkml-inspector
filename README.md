@@ -1,12 +1,10 @@
-# zkml-inspector
+# zkml-inspector — knowledgeless variant
 
-> A multi-agent VS Code Copilot system that analyzes gaps between zkML research papers and their implementations.
+> A multi-agent VS Code Copilot system that compares a zkML research paper against its implementation codebase.
 
-Given a PDF/LaTeX paper and a local codebase, **zkml-inspector** dispatches specialized sub-agents to find:
+> **Note:** this branch is the **knowledgeless** variant of zkml-inspector. The agents are deliberately stripped of curated ZKP/zkML reference material so the system can be benchmarked against the knowledge-rich variant. The orchestration shape (paper-analyst → code-inspector → report-writer) and the grader-compatible output schema are unchanged.
 
-- **Soundness Violations** — Missing constraints, uncommitted weights, unconstrained wires, layer-skip attacks
-- **ZKP Lifecycle Gaps** — Incomplete setup/commitment, proving, or verification phases
-- **Precision Mismatches** — Fixed-point scaling errors between paper assumptions and code reality
+Given a PDF/LaTeX paper and a local codebase, **zkml-inspector** dispatches specialized sub-agents to compare what the paper claims against what the code actually does, and reports the gaps.
 
 ## Installation
 
@@ -100,8 +98,7 @@ zkml-inspector (orchestrator)
 3. report-writer   (assembles findings into deduplicated Markdown report)
 ```
 
-Each agent's output feeds the next. All analysis agents share a common ZKP knowledge
-foundation (`references/zkp_foundations.md`) covering the commit → prove → verify lifecycle.
+Each agent's output feeds the next. There is no curated knowledge base on this branch — each agent works from its model's own background knowledge plus the paper / code it is given.
 
 ### File Structure
 
@@ -115,13 +112,6 @@ foundation (`references/zkp_foundations.md`) covering the commit → prove → v
 └── prompts/
     ├── analyze-full.prompt.md    # Full paper vs. code analysis
     └── analyze-batch.prompt.md   # Batch analysis from manifest
-
-references/                        # Shared ZKP knowledge base (used by both platforms)
-├── zkp_foundations.md
-├── operator_catalog.md
-├── soundness_checklist.md
-├── approximation_db.md
-└── benchmark_taxonomy.md
 ```
 
 ## License

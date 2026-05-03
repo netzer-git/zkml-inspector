@@ -1,8 +1,8 @@
 {
   "name": "zkml-inspector",
   "version": "0.1.0",
-  "displayName": "zkML Inspector — Paper-to-Code Gap Analyzer",
-  "description": "Analyzes gaps between zkML research papers and their implementations. Finds soundness violations, missing constraints, precision mismatches, and uncommitted values.",
+  "displayName": "zkML Inspector — Paper-to-Code Gap Analyzer (knowledgeless variant)",
+  "description": "Compares zkML research papers against their implementations and reports gaps. Knowledgeless variant: no curated reference base; agents work from their own background knowledge plus the supplied paper and codebase.",
   "author": "zkml-inspector",
   "repository": "https://github.com/zkml-inspector/zkml-inspector",
   "license": "MIT",

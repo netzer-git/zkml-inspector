@@ -165,8 +165,8 @@ class TestAnalyzeFullContent:
         )
 
     def test_has_quality_gate(self) -> None:
-        assert "commitment_obligations" in self.text and "proof_system" in self.text, (
-            "analyze-full.md must include quality gate checks on the paper manifest"
+        assert "Quality gate" in self.text or "quality gate" in self.text, (
+            "analyze-full.md must include a quality gate on the paper manifest"
         )
 
 

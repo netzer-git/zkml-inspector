@@ -51,13 +51,13 @@ Mark the paper analysis task as `in_progress` using `TaskUpdate`.
 
 Use the Agent tool to dispatch the **paper-analyst** sub-agent with the paper file path.
 
-The paper-analyst will read the paper and produce a **paper manifest JSON** containing:
-- `proof_system` — which proof system the paper uses
-- `commitment_obligations` — what must be committed (non-empty array)
-- `operators` — what operations are specified (non-empty array)
-- `quantization` — precision requirements
+The paper-analyst will read the paper and produce a **paper manifest JSON**
+containing a flat list of `claims`. Each claim has a `paper_reference`
+(`section_anchor` + `verbatim_quote`) and free-form `claim` / `notes` text.
 
-**Quality gate:** Before proceeding, verify the paper manifest contains all four fields above. If the manifest is incomplete, briefly note the gaps but proceed — the code-inspector will work with what's available.
+**Quality gate:** Before proceeding, verify the paper manifest contains at
+least one claim. If it is empty or malformed, briefly note the gap but
+proceed — the code-inspector will work with what's available.
 
 Mark the paper analysis task as `completed`. Provide a brief progress update to the user.
 
@@ -69,10 +69,9 @@ Use the Agent tool to dispatch the **code-inspector** sub-agent with:
 - The paper manifest (from Step 2)
 - The codebase path
 
-The code-inspector will use the paper manifest as its verification checklist,
-auditing the codebase against every claim in the paper. It produces an
-**audit findings JSON** with commitment_audit, operator_coverage,
-soundness_findings, protocol_transcript_findings, and precision_findings.
+The code-inspector will use the paper manifest as its checklist, comparing
+each paper claim against the actual code. It produces an **audit findings
+JSON** with a flat `findings` array.
 
 Mark the code audit task as `completed`. Provide a brief progress update to the user.
 
@@ -94,20 +93,12 @@ Use the Agent tool to dispatch the **report-writer** sub-agent with:
 
 The report-writer will produce a Markdown report covering:
 - Executive Summary
-- Commitment Audit
-- Operator Coverage Matrix (✅/⚠️/❌/➕)
-- Soundness Findings
-- Protocol Transcript Findings (if any)
-- Precision Findings (if any)
-- Recommendations (prioritized by severity: CRITICAL -> WARNING -> INFO)
+- Findings (severity-ordered: CRITICAL → WARNING → INFO; deduplicated)
+- Recommendations (grouped by severity)
 - **Benchmark Findings (machine-readable)** — a single fenced JSON code
-  block at the end with the deduplicated findings in the 8-field
-  benchmark schema. Required on every report.
-
-Note: every finding flows from code-inspector with `category` and
-`security_concern` already assigned (per
-`references/benchmark_taxonomy.md`); report-writer only renders these
-verbatim.
+  block at the end with the deduplicated CRITICAL findings in the
+  4-field benchmark schema (`issue-name`, `issue-explanation`,
+  `relevant-code`, `paper-reference`). Required on every report.
 
 The report-writer uses the Write tool to save the report to disk.
 
@@ -128,15 +119,13 @@ After the report is written:
 
 ## Communication Style
 
-- Be precise and technical — your audience is ZK engineers
+- Be precise and technical — your audience is engineers
 - Always cite specific files, line numbers, and code snippets
 - Distinguish between "the paper says X" and "the code does Y"
 - When something is ambiguous, flag it as WARNING and explain both interpretations
-- Use mathematical notation where appropriate
 
 ## Security Principles
 
 - Never execute code from the analyzed codebase
 - Only read files within the user-provided paths
 - Sanitize all paths before use
-- Report any potential soundness vulnerabilities immediately

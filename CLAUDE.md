@@ -39,9 +39,9 @@ In Claude Code, the main session acts as orchestrator (since sub-agents cannot d
 
 ### Data flow
 
-1. **paper-analyst** reads a `.pdf` or `.tex` paper → outputs **paper manifest JSON** (operators, commitment_obligations, proof_system, quantization)
-2. **code-inspector** receives the paper manifest + codebase path → outputs **audit findings JSON** (commitment_audit, operator_coverage, soundness_findings)
-3. **report-writer** receives both → writes a **Markdown report** to disk (via `createFile` in Copilot, `Write` in Claude Code)
+1. **paper-analyst** reads a `.pdf` or `.tex` paper → outputs a **paper manifest JSON** (a flat list of `claims`, each with `paper_reference: {section_anchor, verbatim_quote}`)
+2. **code-inspector** receives the paper manifest + codebase path → outputs an **audit findings JSON** (a flat `findings` array; each finding ties back to a paper claim)
+3. **report-writer** receives both → writes a **Markdown report** to disk (via `createFile` in Copilot, `Write` in Claude Code), ending with a 4-field benchmark JSON block of CRITICAL findings
 
 The orchestrator never does analysis itself — it validates inputs, dispatches sub-agents in order, passes outputs forward, and saves the report to `reports/{name}_report.md` if no path is specified.
 
@@ -55,51 +55,38 @@ The orchestrator never does analysis itself — it validates inputs, dispatches 
 ### Key constraints
 
 - paper-analyst **requires** an actual paper file — never accepts a codebase as substitute
-- code-inspector uses the paper manifest as a **verification checklist**, not a code manifest — every finding must tie back to a paper claim
+- code-inspector uses the paper manifest as its checklist — every finding ties back to a paper claim
 - Sub-agents must never have the `execute` tool — analysis is read-only
 - All agents output JSON to stdout; errors to stderr; exit 0 = success, 1 = error
 
-## Reference Knowledge Base
+## Knowledgeless variant
 
-Shared reference files live in the top-level `references/` directory — a single copy used by both Copilot and Claude Code agents at runtime:
-
-| Reference | Path | Used by |
-|-----------|------|---------|
-| `zkp_foundations.md` | `references/` | paper-analyst, code-inspector |
-| `soundness_checklist.md` | `references/` | code-inspector, report-writer |
-| `operator_catalog.md` | `references/` | paper-analyst |
-| `approximation_db.md` | `references/` | paper-analyst |
-| `benchmark_taxonomy.md` | `references/` | code-inspector, report-writer |
-
-Single source of truth — both platforms read from the same files.
+This branch deliberately omits the curated `references/` knowledge base that
+the knowledge-rich variant of zkml-inspector loads. Each agent works only from
+its own model's background knowledge plus the paper and codebase it is given.
+The orchestration shape and the grader-compatible output schema are unchanged,
+so runs from this branch can be benchmarked against runs from the
+knowledge-rich branch.
 
 ## Report Conventions
 
 - Severity: `CRITICAL` > `WARNING` > `INFO`
 - Every finding: severity + file + line + description + recommendation
-- Tables use GitHub-Flavored Markdown; operator status: ✅/⚠️/❌/➕
+- Tables use GitHub-Flavored Markdown
 - report-writer deduplicates findings with shared root causes
+- Report ends with a fenced JSON block of CRITICAL findings in the 4-field benchmark schema (`issue-name`, `issue-explanation`, `relevant-code`, `paper-reference`)
 
 ## Tests
 
 `tests/test_scripts.py` validates the **Copilot layer** (`.github/`):
-- All required agent, prompt, and reference files exist
+- All required agent and prompt files exist
 - Agent frontmatter has required fields (`description`, `tools`, `agents` for orchestrator)
-- Sub-agents are not user-invocable and don't have `execute` tool
-- No references to removed scripts or removed components
-- Content quality: paper-analyst outputs commitment_obligations, code-inspector references soundness_checklist.md, report-writer has dedup logic
-- Batch prompt has resume logic, agent_output.json output, context compaction, and isolation between entries
+- Sub-agents are not user-invocable and don't have the `execute` tool
+- No references to removed scripts
+- Batch prompt has resume logic, `agent_output.json` output, context compaction, and isolation between entries
 - `examples/batch_manifest.json` is valid JSON with required fields (`entry-id`, `paper`, `codebase`)
 
 `tests/test_claude_commands.py` validates the **Claude Code layer** (`.claude/`):
 - `.claude/commands/analyze-full.md` and `analyze-batch.md` exist with required orchestration elements
 - `.claude/mcp.json` is valid and consistent with `.vscode/mcp.json`
 - Commands use Claude Code tool names (`Write`, `Agent`, `mcp__pdf-reader__read_pdf`) not Copilot names (`createFile`)
-
-## zkML Domain Terms
-
-- **Operator** — mathematical operation in the ML model (MatMul, Conv2D, ReLU, Softmax, etc.)
-- **Constraint** — polynomial equality/inequality enforced in the ZK circuit
-- **Commitment obligation** — a value that must be committed for soundness
-- **Transformer Killer** — non-polynomial op expensive to prove (Softmax, LayerNorm, GELU, Sigmoid, Tanh)
-- **Approximation** — simplified non-polynomial operation substituted for ZK circuits

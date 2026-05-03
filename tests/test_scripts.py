@@ -22,7 +22,6 @@ import pytest
 ROOT = Path(__file__).resolve().parent.parent
 AGENTS_DIR = ROOT / ".github" / "agents"
 PROMPTS_DIR = ROOT / ".github" / "prompts"
-REFERENCES_DIR = ROOT / "references"
 
 
 # ---------------------------------------------------------------------------
@@ -39,14 +38,6 @@ EXPECTED_AGENTS = [
 EXPECTED_PROMPTS = [
     "analyze-full.prompt.md",
     "analyze-batch.prompt.md",
-]
-
-EXPECTED_REFERENCES = [
-    "zkp_foundations.md",
-    "operator_catalog.md",
-    "soundness_checklist.md",
-    "approximation_db.md",
-    "benchmark_taxonomy.md",
 ]
 
 
@@ -67,10 +58,11 @@ class TestFileExistence:
         path = PROMPTS_DIR / filename
         assert path.is_file(), f"Missing prompt file: {path}"
 
-    @pytest.mark.parametrize("filename", EXPECTED_REFERENCES)
-    def test_reference_file_exists(self, filename: str) -> None:
-        path = REFERENCES_DIR / filename
-        assert path.is_file(), f"Missing reference file: {path}"
+    def test_references_directory_removed(self) -> None:
+        """Knowledgeless variant: the references/ knowledge base is intentionally absent."""
+        assert not (ROOT / "references").exists(), (
+            "references/ should not exist on the knowledgeless branch"
+        )
 
 
 
@@ -240,22 +232,8 @@ class TestAgentContent:
     def test_paper_analyst_has_output_format(self) -> None:
         text = (AGENTS_DIR / "paper-analyst.agent.md").read_text(encoding="utf-8")
         assert "## Output Format" in text
-        assert '"operators"' in text
-        assert '"proof_system"' in text
-
-    def test_paper_analyst_has_commitment_obligations(self) -> None:
-        """paper-analyst must include commitment_obligations in its output."""
-        text = (AGENTS_DIR / "paper-analyst.agent.md").read_text(encoding="utf-8")
-        assert '"commitment_obligations"' in text, (
-            "paper-analyst output should include commitment_obligations field"
-        )
-
-    def test_paper_analyst_emphasizes_commitments(self) -> None:
-        """paper-analyst must have exhaustive commitment extraction."""
-        text = (AGENTS_DIR / "paper-analyst.agent.md").read_text(encoding="utf-8")
-        assert "EXHAUSTIVE" in text.upper() or "exhaustive" in text.lower(), (
-            "paper-analyst should emphasize exhaustive commitment extraction"
-        )
+        assert '"claims"' in text
+        assert '"paper_reference"' in text
 
     def test_code_inspector_has_output_format(self) -> None:
         text = (AGENTS_DIR / "code-inspector.agent.md").read_text(encoding="utf-8")
@@ -272,8 +250,8 @@ class TestAgentContent:
     def test_code_inspector_produces_findings(self) -> None:
         """code-inspector output is audit findings, not a code manifest."""
         text = (AGENTS_DIR / "code-inspector.agent.md").read_text(encoding="utf-8")
-        assert '"commitment_audit"' in text or '"operator_coverage"' in text or '"soundness_findings"' in text, (
-            "code-inspector output should include audit finding arrays"
+        assert '"findings"' in text, (
+            "code-inspector output should include a findings array"
         )
 
     def test_code_inspector_no_framework_detection_table(self) -> None:
@@ -281,26 +259,6 @@ class TestAgentContent:
         text = (AGENTS_DIR / "code-inspector.agent.md").read_text(encoding="utf-8")
         assert "## Framework Detection Guide" not in text, (
             "code-inspector should not have a framework detection guide table"
-        )
-
-    def test_code_inspector_references_soundness_checklist(self) -> None:
-        """code-inspector must reference soundness_checklist.md."""
-        text = (AGENTS_DIR / "code-inspector.agent.md").read_text(encoding="utf-8")
-        assert "soundness_checklist.md" in text, (
-            "code-inspector should reference soundness_checklist.md"
-        )
-
-    def test_code_inspector_references_benchmark_taxonomy(self) -> None:
-        """code-inspector must reference benchmark_taxonomy.md and require classification."""
-        text = (AGENTS_DIR / "code-inspector.agent.md").read_text(encoding="utf-8")
-        assert "benchmark_taxonomy.md" in text, (
-            "code-inspector should reference benchmark_taxonomy.md"
-        )
-        assert '"category"' in text and '"security_concern"' in text, (
-            "code-inspector output schema must include category and security_concern"
-        )
-        assert '"paper_reference"' in text, (
-            "code-inspector output schema must include structured paper_reference"
         )
 
     def test_report_writer_has_dedup_rule(self) -> None:
@@ -318,17 +276,12 @@ class TestAgentContent:
         for field in [
             "issue-name",
             "issue-explanation",
-            "category",
-            "security-concern",
             "relevant-code",
             "paper-reference",
         ]:
             assert field in text, (
                 f"report-writer Benchmark Findings schema must mention '{field}'"
             )
-        assert "benchmark_taxonomy.md" in text, (
-            "report-writer should reference benchmark_taxonomy.md for closed-list values"
-        )
 
     def test_report_writer_has_file_output_instructions(self) -> None:
         """report-writer must document how the report file is saved."""
@@ -361,83 +314,33 @@ class TestAgentContent:
             "Orchestrator should not reference follow_up_questions"
         )
 
-    def test_analysis_agents_reference_zkp_foundations(self) -> None:
-        """Analysis agents should reference the shared ZKP foundations."""
-        for filename in ["paper-analyst.agent.md", "code-inspector.agent.md"]:
-            text = (AGENTS_DIR / filename).read_text(encoding="utf-8")
-            assert "zkp_foundations.md" in text, (
-                f"{filename} should reference zkp_foundations.md"
-            )
-
-    def test_mock_phantom_detection_in_code_inspector(self) -> None:
-        """code-inspector must have the mock/phantom implementation detection."""
-        text = (AGENTS_DIR / "code-inspector.agent.md").read_text(encoding="utf-8")
-        assert "mock" in text.lower() or "phantom" in text.lower(), (
-            "code-inspector should detect mock/phantom implementations"
-        )
-
-    def test_mock_phantom_detection_in_soundness_checklist(self) -> None:
-        """Soundness checklist must include a CHECK for mock implementations."""
-        text = (REFERENCES_DIR / "soundness_checklist.md").read_text(encoding="utf-8")
-        assert "CHECK-2.5" in text, (
-            "soundness_checklist.md should include CHECK-2.5 for mock/phantom detection"
-        )
-        assert "phantom" in text.lower() or "mock" in text.lower()
-
 
 # ============================================================================
-# Reference file quality tests
+# Knowledgeless variant tests
 # ============================================================================
 
-class TestReferenceContent:
-    """Validate reference files are non-empty and have expected structure."""
+class TestKnowledgelessVariant:
+    """Ensure no agent or prompt references the deleted references/ knowledge base."""
 
-    @pytest.mark.parametrize("filename", EXPECTED_REFERENCES)
-    def test_reference_not_empty(self, filename: str) -> None:
-        path = REFERENCES_DIR / filename
-        text = path.read_text(encoding="utf-8")
-        assert len(text.strip()) > 100, f"{filename} seems too short"
+    REF_PATTERNS = re.compile(
+        r"references/|zkp_foundations|soundness_checklist|operator_catalog|approximation_db|benchmark_taxonomy"
+    )
 
-    def test_operator_catalog_has_operators(self) -> None:
-        text = (REFERENCES_DIR / "operator_catalog.md").read_text(encoding="utf-8")
-        for op in ["MatMul", "Softmax", "ReLU", "LayerNorm"]:
-            assert op in text, f"operator_catalog.md missing {op}"
+    @pytest.mark.parametrize("filename", EXPECTED_AGENTS)
+    def test_agent_no_reference_files(self, filename: str) -> None:
+        text = (AGENTS_DIR / filename).read_text(encoding="utf-8")
+        matches = self.REF_PATTERNS.findall(text)
+        assert not matches, (
+            f"{filename} still references the deleted knowledge base: {matches}"
+        )
 
-    def test_soundness_checklist_has_checks(self) -> None:
-        text = (REFERENCES_DIR / "soundness_checklist.md").read_text(encoding="utf-8")
-        assert "CHECK" in text, "soundness_checklist.md should contain CHECK items"
-
-    def test_no_framework_specific_mentions_in_references(self) -> None:
-        """Reference files should not contain framework-specific mentions."""
-        for filename in EXPECTED_REFERENCES:
-            text = (REFERENCES_DIR / filename).read_text(encoding="utf-8")
-            assert "EZKL" not in text and "ezkl" not in text, (
-                f"{filename} contains EZKL-specific mention — should be framework-agnostic"
-            )
-
-    def test_benchmark_taxonomy_has_required_categories(self) -> None:
-        """benchmark_taxonomy.md must enumerate every closed-list category and concern."""
-        text = (REFERENCES_DIR / "benchmark_taxonomy.md").read_text(encoding="utf-8")
-        categories = [
-            "Under-constrained Circuit",
-            "Protocol/Transcript Logic",
-            "Specification Mismatch",
-            "Numerical/Quantization Bug",
-            "Witness/Commitment Mismatch",
-            "Engineering/Prototype Gap",
-        ]
-        for cat in categories:
-            assert cat in text, f"benchmark_taxonomy.md missing category '{cat}'"
-        concerns = [
-            "Proof Forgery (Soundness)",
-            "Information Leakage (Privacy)",
-            "Semantic Subversion (Integrity)",
-            "Proof Malleability",
-            "Denial of Proof (Reliability)",
-            "Governance Bypass",
-        ]
-        for sc in concerns:
-            assert sc in text, f"benchmark_taxonomy.md missing security concern '{sc}'"
+    @pytest.mark.parametrize("filename", EXPECTED_PROMPTS)
+    def test_prompt_no_reference_files(self, filename: str) -> None:
+        text = (PROMPTS_DIR / filename).read_text(encoding="utf-8")
+        matches = self.REF_PATTERNS.findall(text)
+        assert not matches, (
+            f"{filename} still references the deleted knowledge base: {matches}"
+        )
 
 
 # ============================================================================

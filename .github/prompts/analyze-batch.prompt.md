@@ -16,7 +16,7 @@ argument-hint: "manifest=<absolute_path_to_batch_manifest.json>"
 You are performing a **batch analysis** of multiple zkML paper+codebase pairs
 defined in a JSON manifest file. For each entry you run the full zkml-inspector
 pipeline (`paper-analyst → code-inspector → report-writer`), then produce a
-summary JSON covering all analyses.
+flat benchmark JSON aggregating every report's CRITICAL findings.
 
 ## Manifest Format
 
@@ -74,8 +74,7 @@ For **each** entry in the `analyses` array, in order:
    it, write the report yourself using `createFile`.
 
 5. **Context compaction** — After finishing each entry, mentally discard the
-   paper-specific details (manifest, findings, operator lists). Carry forward
-   **only**:
+   paper-specific details (manifest, findings). Carry forward **only**:
    - The overall batch plan (which entries remain)
    - The output directory path
    - Any skipped entries and why
@@ -88,8 +87,7 @@ For **each** entry in the `analyses` array, in order:
 ### Phase 2 — Benchmark JSON
 
 After **all** entries are complete (or skipped), generate a single flat
-output file at `<output_dir>/agent_output.json` in the
-zkML-inspector-benchmark schema for Critical findings only.
+output file at `<output_dir>/agent_output.json` for Critical findings only.
 
 **Procedure:**
 

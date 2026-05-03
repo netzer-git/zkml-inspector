@@ -2,8 +2,8 @@
 
 Perform a **batch analysis** of multiple zkML paper+codebase pairs defined in
 a JSON manifest file. For each entry, run the full pipeline
-(`paper-analyst -> code-inspector -> report-writer`), then produce a summary
-JSON covering all analyses.
+(`paper-analyst -> code-inspector -> report-writer`), then produce a flat
+benchmark JSON aggregating every report's CRITICAL findings.
 
 ## Input
 
@@ -87,8 +87,7 @@ For **each** entry in the `analyses` array, in order:
    to `completed`.
 
 7. **Context compaction** — After finishing each entry, mentally discard the
-   paper-specific details (manifest, findings, operator lists). Carry forward
-   **only**:
+   paper-specific details (manifest, findings). Carry forward **only**:
    - The overall batch plan (which entries remain)
    - The output directory path
    - Any skipped entries and why
@@ -96,15 +95,14 @@ For **each** entry in the `analyses` array, in order:
    Do NOT carry forward finding counts or per-entry summaries — those will be
    re-read from the report files in Phase 2.
 
-6. Move to the next entry.
+8. Move to the next entry.
 
 ## Phase 2 — Benchmark JSON
 
 Mark the `Generate agent_output.json` task as `in_progress` using `TaskUpdate`.
 
 After **all** entries are complete (or skipped), generate a single flat
-output file at `<output_dir>/agent_output.json` in the
-zkML-inspector-benchmark schema.
+output file at `<output_dir>/agent_output.json`.
 
 **Procedure:**
 

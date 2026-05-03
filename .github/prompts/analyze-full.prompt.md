@@ -17,25 +17,17 @@ Perform a comprehensive audit comparing the research paper against the implement
 
 1. Confirm the paper path and codebase path with the user
 2. Run the sequential pipeline:
-   - **paper-analyst**: Extract verification checklist from the paper (commitment obligations, operator specs, constraints, precision requirements)
-   - **code-inspector**: Audit the codebase against the paper manifest (commitment audit, operator coverage, soundness checks, protocol transcript, precision)
+   - **paper-analyst**: Read the paper and produce a list of claims it makes about the implementation
+   - **code-inspector**: Audit the codebase against the paper manifest and produce a flat list of findings
    - **report-writer**: Assemble the final Markdown report
 
 3. The report must cover ALL of these sections:
    - Executive Summary
-   - Commitment Audit
-   - Operator Coverage Matrix (✅/⚠️/❌/➕)
-   - Soundness Findings
-   - Protocol Transcript Findings (if any)
-   - Precision Findings (if any)
-   - Recommendations (prioritized by severity: CRITICAL → WARNING → INFO)
+   - Findings (severity-ordered: CRITICAL → WARNING → INFO; deduplicated)
+   - Recommendations (grouped by severity)
    - **Benchmark Findings (machine-readable)** — a single fenced JSON
-     code block at the end with the deduplicated findings in the 8-field
-     benchmark schema. Required on every report.
-
-   Note: every finding flows from code-inspector with `category` and
-   `security_concern` already assigned (per
-   `references/benchmark_taxonomy.md`); report-writer only renders these
-   verbatim.
+     code block at the end with the deduplicated CRITICAL findings in
+     the 4-field benchmark schema (`issue-name`, `issue-explanation`,
+     `relevant-code`, `paper-reference`). Required on every report.
 
 4. Present the report to the user and offer to dive deeper into any section

@@ -2,9 +2,11 @@
 
 ## Project Overview
 
-zkml-inspector is a multi-agent VS Code Copilot system that analyzes gaps between zkML (zero-knowledge machine learning) research papers and their implementations. It finds soundness violations, missing constraints, precision mismatches, and uncommitted values.
+zkml-inspector is a multi-agent VS Code Copilot system that compares zkML (zero-knowledge machine learning) research papers against their implementations and reports gaps.
 
-No runtime dependencies — the agent pipeline uses built-in LLM capabilities. Reference data is stored in Markdown under `references/` at the repo root (shared across Copilot and Claude Code agents).
+This branch is the **knowledgeless** variant: the curated `references/` knowledge base that the knowledge-rich variant loads has been removed deliberately so the system can be benchmarked against runs that did receive that knowledge. Each agent works only from its model's background knowledge plus the paper and codebase it is given. The orchestration shape and the grader-compatible output schema are unchanged.
+
+No runtime dependencies — the agent pipeline uses built-in LLM capabilities.
 
 PDF reading requires the `pdf-reader` MCP server (configured in `.vscode/mcp.json`). It uses `npx @sylphx/pdf-reader-mcp` — Node.js must be available.
 
@@ -23,16 +25,15 @@ Pipeline: `paper-analyst → code-inspector → report-writer` (strictly sequent
 
 | Agent | Responsibility | Tools | Inputs | Output |
 |-------|---------------|-------|--------|--------|
-| **zkml-inspector** | Orchestrates sequential pipeline, validates inputs, dispatches sub-agents | read, search, agent, todo, web, createFile | Paper path + codebase path | Final report file |
-| **paper-analyst** | Extracts verification checklist from paper: commitment obligations, operator specs, constraints, precision requirements, protocol rounds | read, search, mcp::pdf-reader::read_pdf | Paper file path (.pdf/.tex only) | Paper manifest JSON |
-| **code-inspector** | Audits codebase against paper manifest: commitment verification, operator coverage, soundness checks, protocol transcript audit, precision validation | read, search | Paper manifest + codebase path | Audit findings JSON |
-| **report-writer** | Assembles findings into deduplicated Markdown report with severity ordering, writes report file to disk | read, createFile | Paper manifest + audit findings + output_path | Markdown report file |
+| **zkml-inspector** | Orchestrates the sequential pipeline, validates inputs, dispatches sub-agents | read, search, agent, todo, web, createFile | Paper path + codebase path | Final report file |
+| **paper-analyst** | Reads the paper and produces a list of claims it makes about the implementation | read, search, mcp::pdf-reader::read_pdf | Paper file path (.pdf/.tex only) | Paper manifest JSON |
+| **code-inspector** | Audits the codebase against each paper claim | read, search | Paper manifest + codebase path | Audit findings JSON |
+| **report-writer** | Assembles deduplicated, severity-ordered findings into a Markdown report and writes it to disk; report ends with the 4-field benchmark JSON of CRITICAL findings | read, createFile | Paper manifest + audit findings + output_path | Markdown report file |
 
 ### Key Design Constraints
 - Pipeline is **strictly sequential** — each agent's output feeds the next
 - paper-analyst **REQUIRES** an actual paper file — refuses codebase-as-substitute
-- code-inspector receives the paper manifest and uses it as a **verification checklist** — reads only relevant code files
-- code-inspector produces **audit findings** (not a code manifest) — each finding ties back to a paper claim
+- code-inspector uses the paper manifest as its checklist — every finding ties back to a paper claim
 - report-writer **deduplicates** findings with shared root causes
 - All sub-agents are `user-invocable: false`
 - Batch analysis (`/analyze-batch`) saves reports **next to the manifest file** (not in the zkml-inspector workspace) to prevent code-inspector search contamination
@@ -47,7 +48,7 @@ Pipeline: `paper-analyst → code-inspector → report-writer` (strictly sequent
 ## Build & Test
 
 ```bash
-python -m pytest tests/ -v           # Validates agent configs, references, and consistency
+python -m pytest tests/ -v           # Validates agent configs and consistency
 ```
 
 ## Security Boundaries
@@ -58,28 +59,12 @@ python -m pytest tests/ -v           # Validates agent configs, references, and 
 
 ## Code Style
 - Python 3.10+ with type hints on all signatures; UTF-8 everywhere
-- Reference data lives in `references/` at the repo root as Markdown
 - All agents output JSON to stdout (parseable by orchestrator); errors to stderr
 - Exit code 0 = success, 1 = error
 
 ## Report Conventions
 - Severity levels: `CRITICAL`, `WARNING`, `INFO`
 - Every finding: severity + location (file + line) + description + recommendation
-- Tables use GitHub-Flavored Markdown; operator status uses ✅/⚠️/❌/➕
+- Tables use GitHub-Flavored Markdown
 - Reports saved to `reports/{name}_report.md` unless user specifies a path
-
-## zkML Domain Terms
-- **Operator** = mathematical operation (MatMul, Conv2D, ReLU, Softmax, etc.)
-- **Constraint** = polynomial equality/inequality enforced in the circuit
-- **Approximation** = simplified non-polynomial operation for ZK circuits
-- **Commitment obligation** = a value that must be committed for soundness
-- **Transformer Killer** = non-polynomial ops expensive to prove (Softmax, LayerNorm, GELU, Sigmoid, Tanh)
-
-## Key Reference Files
-
-See `CLAUDE.md` for the full file inventory. Critical references for agent development:
-- `references/zkp_foundations.md` — Shared ZKP lifecycle knowledge (paper-analyst + code-inspector load this)
-- `references/soundness_checklist.md` — Soundness audit checklist (code-inspector loads this)
-- `references/operator_catalog.md` — 30+ operators with ZK patterns and gap signatures
-- `references/approximation_db.md` — Approximation strategies with error bounds
-- `references/benchmark_taxonomy.md` — Closed-list `category` and `security_concern` values for benchmark-ready findings
+- Report ends with a fenced JSON block of CRITICAL findings in the 4-field benchmark schema (`issue-name`, `issue-explanation`, `relevant-code`, `paper-reference`)
