@@ -26,7 +26,7 @@ Pipeline: `paper-analyst → code-inspector → report-writer` (strictly sequent
 | **zkml-inspector** | Orchestrates sequential pipeline, validates inputs, dispatches sub-agents | read, search, agent, todo, web, createFile | Paper path + codebase path | Final report file |
 | **paper-analyst** | Extracts verification checklist from paper: commitment obligations, operator specs, constraints, precision requirements, protocol rounds | read, search, mcp::pdf-reader::read_pdf | Paper file path (.pdf/.tex only) | Paper manifest JSON |
 | **code-inspector** | Audits codebase against paper manifest: commitment verification, operator coverage, soundness checks, protocol transcript audit, precision validation | read, search | Paper manifest + codebase path | Audit findings JSON |
-| **report-writer** | Assembles findings into deduplicated Markdown report with severity ordering, writes report file to disk | read, createFile | Paper manifest + audit findings + output_path | Markdown report file |
+| **report-writer** | Filters CRITICAL findings, deduplicates, merges into agent_output.json | read, createFile | Paper manifest + audit findings + entry_id + output_path | Updated agent_output.json |
 
 ### Key Design Constraints
 - Pipeline is **strictly sequential** — each agent's output feeds the next
@@ -35,14 +35,14 @@ Pipeline: `paper-analyst → code-inspector → report-writer` (strictly sequent
 - code-inspector produces **audit findings** (not a code manifest) — each finding ties back to a paper claim
 - report-writer **deduplicates** findings with shared root causes
 - All sub-agents are `user-invocable: false`
-- Batch analysis (`/analyze-batch`) saves reports **next to the manifest file** (not in the zkml-inspector workspace) to prevent code-inspector search contamination
+- Batch analysis (`/analyze-batch`) saves `agent_output.json` **next to the manifest file** (not in the zkml-inspector workspace) to prevent code-inspector search contamination. Uses `completed_entries.json` sidecar for resume.
 
 ### Workflows
 
 | Prompt | When | Agents Used |
 |--------|------|-------------|
 | `/analyze-full` | Paper + codebase comparison | All 3 agents |
-| `/analyze-batch` | Multiple papers + codebases from manifest | zkml-inspector → all 3 agents (per entry), then `agent_output.json` (flat benchmark schema) |
+| `/analyze-batch` | Multiple papers + codebases from manifest | zkml-inspector → all 3 agents (per entry), report-writer merges into `agent_output.json` after each entry |
 
 ## Build & Test
 
@@ -62,11 +62,12 @@ python -m pytest tests/ -v           # Validates agent configs, references, and 
 - All agents output JSON to stdout (parseable by orchestrator); errors to stderr
 - Exit code 0 = success, 1 = error
 
-## Report Conventions
-- Severity levels: `CRITICAL`, `WARNING`, `INFO`
-- Every finding: severity + location (file + line) + description + recommendation
-- Tables use GitHub-Flavored Markdown; operator status uses ✅/⚠️/❌/➕
-- Reports saved to `reports/{name}_report.md` unless user specifies a path
+## Output Conventions
+- Output is `agent_output.json` — a flat JSON array of 5-field findings
+- Schema fields: `entry-id`, `issue-name`, `issue-explanation`, `relevant-code`, `paper-reference`
+- Only CRITICAL-severity findings are included (WARNING/INFO filtered out)
+- report-writer deduplicates findings with shared root causes
+- Resume tracking via `completed_entries.json` sidecar
 
 ## zkML Domain Terms
 - **Operator** = mathematical operation (MatMul, Conv2D, ReLU, Softmax, etc.)

@@ -33,7 +33,7 @@ between them, and present the final report.
 |-------|------|-------|--------|
 | **paper-analyst** | Extract claims & verification checklist from paper | Paper path | Paper manifest JSON |
 | **code-inspector** | Audit codebase against paper manifest | Paper manifest + codebase path | Audit findings JSON |
-| **report-writer** | Assemble final Markdown report | Paper manifest + audit findings | Markdown report |
+| **report-writer** | Filter findings to CRITICAL, deduplicate, write to agent_output.json | read, createFile | Paper manifest + audit findings + entry_id + output_path | Updated agent_output.json |
 
 ## Pipeline
 
@@ -84,33 +84,35 @@ Invoke **code-inspector** with:
 The code-inspector will use the paper manifest as its verification checklist,
 auditing the codebase against every claim in the paper.
 
-### Step 4: Report Generation (report-writer)
+### Step 4: Findings Export (report-writer)
 
 Invoke **report-writer** with:
 - The paper manifest (from Step 2)
 - The audit findings (from Step 3)
-- An `output_path` for the report file
+- An `entry_id` for this analysis
+- An `output_path` pointing to `agent_output.json`
 
-#### Report File Output (MANDATORY)
+#### Determining entry_id
 
-The report MUST be saved to disk as a Markdown file. Determine the output path:
+1. If the user specified an entry-id, use that.
+2. Otherwise, derive it from the paper filename: strip extension, lowercase,
+   replace spaces with hyphens (e.g., `zkLLM.pdf` → `zkllm`).
+
+#### Determining output_path
 
 1. If the user specified an output path, use that.
-2. Otherwise, derive a filename from the paper title or codebase name:
-   - Sanitize the name: lowercase, replace spaces with hyphens, strip special chars
-   - Pattern: `reports/{name}_report.md`
-   - Example: `reports/zkllm_report.md`
-3. Include the `output_path` in the prompt to report-writer.
+2. Otherwise, default to `reports/agent_output.json`.
 
-The **report-writer** agent will write the file to disk itself using its
-`createFile` tool — you do NOT need to write it. After report-writer
+The **report-writer** agent will merge findings into `agent_output.json` itself
+using its `createFile` tool — you do NOT need to write it. After report-writer
 confirms the file was saved:
-1. **Present a summary** to the user in chat.
-2. **Confirm the file location**: tell the user where the report was saved.
+1. **Present a summary** to the user in chat (how many CRITICAL findings
+   were exported, how many filtered out).
+2. **Confirm the file location**: tell the user where `agent_output.json` was saved.
 
-**Fallback:** If report-writer returns the report content but could not
-save the file, use YOUR `createFile` tool to write it to `output_path`.
-The report MUST be on disk before the pipeline is considered complete.
+**Fallback:** If report-writer returns findings but could not save the file,
+use YOUR `createFile` tool to write the JSON to `output_path`.
+The file MUST be on disk before the pipeline is considered complete.
 
 ## Workflow: Quick Scan
 
@@ -119,9 +121,11 @@ When the user asks for a quick scan or just critical issues:
 1. Run Steps 1-3 as above, but tell the code-inspector to focus only on
    CRITICAL findings (missing operators, uncommitted values, soundness
    violations, mock implementations)
-2. Present a condensed finding list instead of a full report: each CRITICAL
-   finding with file, line, and one-sentence recommendation
-3. End with a total count: "X critical issues found"
+2. Run Step 4 as above — report-writer exports CRITICAL findings to
+   `agent_output.json`
+3. Present a condensed finding list to the user: each CRITICAL finding
+   with file, line, and one-sentence recommendation
+4. End with a total count: "X critical issues found"
 
 ## Communication Style
 

@@ -1,0 +1,23 @@
+[
+  {
+    "entry-id": "zkfoo",
+    "issue-name": "Unconstrained activation witness",
+    "issue-explanation": "The activation function output is loaded as a free advice cell without any polynomial constraint tying it to the input. A malicious prover can substitute any value for the activation result and still satisfy the circuit, breaking the soundness guarantee described in the paper.",
+    "relevant-code": "src/activation.rs:42-58, src/circuit.rs:120",
+    "paper-reference": "Section 4.2: \"Each non-linear operator is enforced via a lookup argument against the precomputed activation table.\""
+  },
+  {
+    "entry-id": "zkfoo",
+    "issue-name": "Missing bias vector commitment",
+    "issue-explanation": "The bias vectors used in fully-connected layers are never committed via Pedersen commitments. Without binding these values, a malicious prover can modify bias terms post-hoc to shift layer outputs without detection by the verifier.",
+    "relevant-code": "src/linear.rs:88-95",
+    "paper-reference": "Section 3.1: \"All model parameters, including weight matrices and bias vectors, are committed before the proof begins.\""
+  },
+  {
+    "entry-id": "zkbar",
+    "issue-name": "Non-binding Fiat-Shamir transcript",
+    "issue-explanation": "Challenges for the sumcheck protocol are drawn from a random number generator rather than from a transcript that absorbs prior witnesses. This allows a malicious prover to choose challenges adaptively after seeing the witness, breaking soundness of every downstream sumcheck instance.",
+    "relevant-code": "src/prover.cpp:210-215",
+    "paper-reference": "Protocol 1 Step 2: \"The verifier draws a random challenge from the Fiat-Shamir transcript after absorbing the prover's commitment.\""
+  }
+]

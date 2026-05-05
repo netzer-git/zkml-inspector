@@ -41,16 +41,16 @@ In Claude Code, the main session acts as orchestrator (since sub-agents cannot d
 
 1. **paper-analyst** reads a `.pdf` or `.tex` paper → outputs **paper manifest JSON** (operators, commitment_obligations, proof_system, quantization)
 2. **code-inspector** receives the paper manifest + codebase path → outputs **audit findings JSON** (commitment_audit, operator_coverage, soundness_findings)
-3. **report-writer** receives both → writes a **Markdown report** to disk (via `createFile` in Copilot, `Write` in Claude Code)
+3. **report-writer** receives paper manifest + audit findings + entry_id + output_path → filters to CRITICAL, deduplicates, and merges into **`agent_output.json`** (via `createFile` in Copilot, `Write` in Claude Code)
 
-The orchestrator never does analysis itself — it validates inputs, dispatches sub-agents in order, passes outputs forward, and saves the report to `reports/{name}_report.md` if no path is specified.
+The orchestrator never does analysis itself — it validates inputs, dispatches sub-agents in order, passes outputs forward, and saves findings to `agent_output.json`.
 
 ### Workflows
 
 | Prompt | Behavior |
 |--------|----------|
-| `/analyze-full` | Full pipeline, complete report |
-| `/analyze-batch` | Reads `batch_manifest.json`, runs full pipeline per entry, saves reports **next to the manifest** (NOT inside zkml-inspector workspace), produces `agent_output.json` (flat array in the zkML-inspector-benchmark schema), supports resume by skipping existing reports |
+| `/analyze-full` | Full pipeline, exports CRITICAL findings to `agent_output.json` |
+| `/analyze-batch` | Reads `batch_manifest.json`, runs full pipeline per entry, report-writer merges findings into `agent_output.json` after each entry, uses `completed_entries.json` sidecar for resume |
 
 ### Key constraints
 
@@ -73,12 +73,13 @@ Shared reference files live in the top-level `references/` directory — a singl
 
 Single source of truth — both platforms read from the same files.
 
-## Report Conventions
+## Output Conventions
 
-- Severity: `CRITICAL` > `WARNING` > `INFO`
-- Every finding: severity + file + line + description + recommendation
-- Tables use GitHub-Flavored Markdown; operator status: ✅/⚠️/❌/➕
+- Output is `agent_output.json` — a flat JSON array of 5-field findings
+- Schema fields: `entry-id`, `issue-name`, `issue-explanation`, `relevant-code`, `paper-reference`
+- Only CRITICAL-severity findings are included (WARNING/INFO filtered out)
 - report-writer deduplicates findings with shared root causes
+- Resume tracking via `completed_entries.json` sidecar
 
 ## Tests
 
@@ -87,8 +88,8 @@ Single source of truth — both platforms read from the same files.
 - Agent frontmatter has required fields (`description`, `tools`, `agents` for orchestrator)
 - Sub-agents are not user-invocable and don't have `execute` tool
 - No references to removed scripts or removed components
-- Content quality: paper-analyst outputs commitment_obligations, code-inspector references soundness_checklist.md, report-writer has dedup logic
-- Batch prompt has resume logic, agent_output.json output, context compaction, and isolation between entries
+- Content quality: paper-analyst outputs commitment_obligations, code-inspector references soundness_checklist.md, report-writer has dedup logic and outputs agent_output.json
+- Batch prompt has resume logic via completed_entries.json, agent_output.json output, context compaction, and isolation between entries
 - `examples/batch_manifest.json` is valid JSON with required fields (`entry-id`, `paper`, `codebase`)
 
 `tests/test_claude_commands.py` validates the **Claude Code layer** (`.claude/`):

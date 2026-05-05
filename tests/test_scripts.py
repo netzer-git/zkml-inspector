@@ -309,39 +309,72 @@ class TestAgentContent:
             "report-writer should have a finding deduplication rule"
         )
 
-    def test_report_writer_has_benchmark_findings_section(self) -> None:
-        """report-writer must produce a trailing Benchmark Findings JSON block."""
+    def test_report_writer_outputs_agent_output_json(self) -> None:
+        """report-writer must produce agent_output.json, not Markdown."""
         text = (AGENTS_DIR / "report-writer.agent.md").read_text(encoding="utf-8")
-        assert "Benchmark Findings" in text, (
-            "report-writer should describe a Benchmark Findings (machine-readable) section"
+        assert "agent_output.json" in text, (
+            "report-writer should describe agent_output.json output"
         )
         for field in [
+            "entry-id",
             "issue-name",
             "issue-explanation",
-            "category",
-            "security-concern",
             "relevant-code",
             "paper-reference",
         ]:
             assert field in text, (
-                f"report-writer Benchmark Findings schema must mention '{field}'"
+                f"report-writer output schema must mention '{field}'"
             )
         assert "benchmark_taxonomy.md" in text, (
-            "report-writer should reference benchmark_taxonomy.md for closed-list values"
+            "report-writer should reference benchmark_taxonomy.md for validation"
+        )
+
+    def test_report_writer_has_entry_id_input(self) -> None:
+        """report-writer must accept entry_id as an input parameter."""
+        text = (AGENTS_DIR / "report-writer.agent.md").read_text(encoding="utf-8")
+        assert "entry_id" in text, (
+            "report-writer should accept entry_id as input"
+        )
+
+    def test_report_writer_has_severity_filter(self) -> None:
+        """report-writer must filter to CRITICAL-only findings."""
+        text = (AGENTS_DIR / "report-writer.agent.md").read_text(encoding="utf-8")
+        assert "CRITICAL" in text, (
+            "report-writer should describe CRITICAL-only filtering"
+        )
+        assert "WARNING" in text and "INFO" in text, (
+            "report-writer should mention filtering out WARNING and INFO"
+        )
+
+    def test_report_writer_has_merge_logic(self) -> None:
+        """report-writer must describe read-existing-then-merge behavior."""
+        text = (AGENTS_DIR / "report-writer.agent.md").read_text(encoding="utf-8")
+        assert "merge" in text.lower() or "Merge" in text, (
+            "report-writer should describe merge behavior for existing JSON"
+        )
+        assert "Remove" in text or "replace" in text.lower(), (
+            "report-writer should describe replacing findings for the same entry-id"
         )
 
     def test_report_writer_has_file_output_instructions(self) -> None:
-        """report-writer must document how the report file is saved."""
+        """report-writer must document how agent_output.json is saved."""
         text = (AGENTS_DIR / "report-writer.agent.md").read_text(encoding="utf-8")
         assert "output_path" in text, (
             "report-writer should reference output_path for file saving"
         )
 
-    def test_orchestrator_has_report_file_output(self) -> None:
-        """Orchestrator must instruct saving the report to disk."""
+    def test_report_writer_has_completed_entries_sidecar(self) -> None:
+        """report-writer must update completed_entries.json sidecar."""
+        text = (AGENTS_DIR / "report-writer.agent.md").read_text(encoding="utf-8")
+        assert "completed_entries.json" in text, (
+            "report-writer should describe completed_entries.json sidecar"
+        )
+
+    def test_orchestrator_has_entry_id_logic(self) -> None:
+        """Orchestrator must pass entry_id to report-writer."""
         text = (AGENTS_DIR / "zkml-inspector.agent.md").read_text(encoding="utf-8")
-        assert "write the file to disk" in text, (
-            "Orchestrator should instruct writing the report to a file"
+        assert "entry_id" in text, (
+            "Orchestrator should pass entry_id to report-writer"
         )
 
     def test_orchestrator_has_sequential_pipeline(self) -> None:
@@ -495,18 +528,14 @@ class TestBatchPrompt:
         )
 
     def test_batch_prompt_has_benchmark_schema_fields(self) -> None:
-        """Batch prompt must mention the 5 required benchmark fields."""
+        """Batch prompt must mention agent_output.json and entry-id."""
         text = (PROMPTS_DIR / "analyze-batch.prompt.md").read_text(encoding="utf-8")
-        for field in [
-            "entry-id",
-            "issue-name",
-            "issue-explanation",
-            "relevant-code",
-            "paper-reference",
-        ]:
-            assert field in text, (
-                f"analyze-batch must reference benchmark field '{field}'"
-            )
+        assert "agent_output.json" in text, (
+            "analyze-batch must reference agent_output.json output"
+        )
+        assert "entry-id" in text or "entry_id" in text, (
+            "analyze-batch must reference entry-id field"
+        )
 
     def test_batch_prompt_has_context_compaction(self) -> None:
         """Batch prompt must describe context compaction between entries."""
@@ -516,10 +545,10 @@ class TestBatchPrompt:
         )
 
     def test_batch_prompt_saves_outside_workspace(self) -> None:
-        """Batch prompt must save reports outside the zkml-inspector workspace."""
+        """Batch prompt must save output outside the zkml-inspector workspace."""
         text = (PROMPTS_DIR / "analyze-batch.prompt.md").read_text(encoding="utf-8")
-        assert "NOT inside the zkml-inspector" in text or "next to manifest" in text.lower(), (
-            "analyze-batch should save reports outside the zkml-inspector workspace"
+        assert "NOT inside the zkml-inspector" in text or "next to manifest" in text.lower() or "NOT inside" in text, (
+            "analyze-batch should save output outside the zkml-inspector workspace"
         )
 
     def test_batch_prompt_has_isolation_constraint(self) -> None:

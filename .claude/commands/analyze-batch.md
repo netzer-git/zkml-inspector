@@ -2,8 +2,9 @@
 
 Perform a **batch analysis** of multiple zkML paper+codebase pairs defined in
 a JSON manifest file. For each entry, run the full pipeline
-(`paper-analyst -> code-inspector -> report-writer`), then produce a summary
-JSON covering all analyses.
+(`paper-analyst -> code-inspector -> report-writer`). The report-writer
+directly updates `agent_output.json` after each entry — no post-processing
+phase is needed.
 
 ## Input
 
@@ -30,7 +31,7 @@ The manifest is a JSON file with this structure:
 ```
 
 - `analyses` — array of entries, each with `entry-id`, `paper`, `codebase`
-- `output_dir` — output folder for reports, relative to the manifest file
+- `output_dir` — output folder for agent_output.json, relative to the manifest file
 - All paths inside the manifest are **relative to the manifest file's location**
 
 ## Phase 0 — Setup
@@ -43,12 +44,10 @@ The manifest is a JSON file with this structure:
    missing paths and skip those entries (do not abort the batch).
 5. **Create tasks** — Use the `TaskCreate` tool to create a task list for the
    batch run. Create one task per valid analysis entry (subject format:
-   `Analyze <entry-id> (<i>/<n>)`, e.g. `Analyze zkllm (1/4)`), plus one task
-   for `Generate agent_output.json` and one for `Print final summary table`.
+   `Analyze <entry-id> (<i>/<n>)`, e.g. `Analyze zkllm (1/4)`).
    Set up `addBlockedBy` dependencies so each analysis task is blocked by the
-   previous one, the agent_output task is blocked by all analysis tasks, and
-   the final table task is blocked by the agent_output task. Mark skipped
-   entries' tasks as `completed` immediately with a note in the description.
+   previous one. Mark skipped entries' tasks as `completed` immediately with
+   a note in the description.
 
 ## Phase 1 — Sequential Analysis (one entry at a time)
 
@@ -57,9 +56,10 @@ one at a time so each sub-agent gets a clean context.
 
 For **each** entry in the `analyses` array, in order:
 
-1. **Check for existing report** — if `<output_dir>/<entry-id>_report.md` already
-   exists, **skip** this entry and log "Skipping <entry-id> — report already exists".
-   Mark its task as `completed` (description: "Skipped — report already exists").
+1. **Check for completed entry** — read `<output_dir>/completed_entries.json`
+   (if it exists). If this entry's `entry-id` is listed, **skip** this entry
+   and log "Skipping <entry-id> — already completed". Mark its task as
+   `completed` (description: "Skipped — already completed").
    This enables resume: re-invoking with the same manifest after an interrupted
    batch will pick up where it left off.
 
@@ -72,16 +72,25 @@ For **each** entry in the `analyses` array, in order:
    entry, providing:
    - `paper` = the entry's absolute paper path
    - `codebase` = the entry's absolute codebase path
-   - `output_path` = `<output_dir>/<entry-id>_report.md`
+   - `entry_id` = the entry's `entry-id` from the manifest (verbatim,
+     preserving casing)
+   - `output_path` = `<output_dir>/agent_output.json`
 
    This runs the standard `paper-analyst → code-inspector → report-writer`
    pipeline as defined in `.claude/commands/analyze-full.md`. Do NOT duplicate
    the pipeline logic here — read and follow `analyze-full.md` exactly. The
    paper-analyst uses `mcp__pdf-reader__read_pdf` for PDF files. The
-   report-writer uses the Write tool to save the report.
+   report-writer uses the Write tool to save findings to disk.
 
-5. **Confirm** the report file was written. If report-writer could not write
-   it, use the Write tool yourself to save the report.
+   The report-writer will:
+   - Filter to CRITICAL-severity findings only
+   - Deduplicate by root cause
+   - Merge findings into `agent_output.json` (replacing any prior findings
+     for this entry-id)
+   - Update `completed_entries.json` sidecar
+
+5. **Confirm** findings were written. If report-writer could not write the
+   file, use the Write tool yourself to save the JSON.
 
 6. **Mark task completed** — Use `TaskUpdate` to set this entry's task status
    to `completed`.
@@ -93,98 +102,28 @@ For **each** entry in the `analyses` array, in order:
    - The output directory path
    - Any skipped entries and why
 
-   Do NOT carry forward finding counts or per-entry summaries — those will be
-   re-read from the report files in Phase 2.
+   Do NOT carry forward finding counts or per-entry details.
 
-6. Move to the next entry.
+8. Move to the next entry.
 
-## Phase 2 — Benchmark JSON
+## Phase 2 — Completion
 
-Mark the `Generate agent_output.json` task as `in_progress` using `TaskUpdate`.
+After all entries are complete (or skipped):
 
-After **all** entries are complete (or skipped), generate a single flat
-output file at `<output_dir>/agent_output.json` in the
-zkML-inspector-benchmark schema.
-
-**Procedure:**
-
-1. For each completed entry, read its `<output_dir>/<entry-id>_report.md`.
-2. Locate the trailing **Benchmark Findings (machine-readable)** fenced
-   JSON code block at the end of the report. Parse it as JSON.
-3. For each finding object in that array, inject `"entry-id":
-   "<entry-id>"` (use the manifest key verbatim, preserving casing).
-   The result is an object with **all 5 required fields**:
-
-   | Field | Source |
-   |-------|--------|
-   | `entry-id` | Manifest key for this entry |
-   | `issue-name` | From the report's Benchmark Findings block |
-   | `issue-explanation` | From the report's Benchmark Findings block |
-   | `relevant-code` | Comma-separated `file:line` references, or `""` |
-   | `paper-reference` | Section + optional quote, or `"-"` |
-
-4. **Validate** every finding before adding it to the output array:
-   - All 5 keys present and non-null (empty string allowed only for
-     `relevant-code`).
-
-   On validation failure: log the offending `entry-id` and finding
-   `issue-name`, then **omit that finding** from the output. Do NOT
-   silently coerce. Do NOT abort the whole batch.
-
-5. **Sort** the final array deterministically for stable diffs:
-   - Primary key: `entry-id` (case-insensitive ASCII order).
-   - Secondary key: `issue-name` (case-insensitive ASCII order).
-
-6. Use the Write tool to save the resulting flat JSON array to
-   `<output_dir>/agent_output.json` (pretty-printed with 2-space indent,
-   UTF-8).
-
-7. Do NOT also write the legacy per-entry summary file — that format is
-   removed; only the flat benchmark-schema array is produced.
-
-**Schema reminder — the file is a flat array:**
-
-```json
-[
-  {
-    "entry-id": "zkllm",
-    "issue-name": "Model Binding",
-    "issue-explanation": "...",
-    "relevant-code": "proof.cu:3",
-    "paper-reference": "Section 3.3: \"...\""
-  }
-]
-```
-
-Mark the `Generate agent_output.json` task as `completed`.
-
-## Phase 3 — Final Summary Table
-
-Mark the `Print final summary table` task as `in_progress` using `TaskUpdate`.
-
-Print a summary table to the user:
-
-```
-| Paper    | Codebase           | Critical | Warning | Info | Total | Report                |
-|----------|--------------------|----------|---------|------|-------|-----------------------|
-| zkLLM    | zkllm-ccs2024      |       14 |       9 |    9 |    32 | zkllm_report.md       |
-| ...      | ...                |      ... |     ... |  ... |   ... | ...                   |
-```
-
-Then confirm: "All reports saved to `<output_dir>/`. Benchmark output at `agent_output.json`."
-
-Mark the `Print final summary table` task as `completed`.
+1. Confirm: "All entries processed. Findings saved to
+   `<output_dir>/agent_output.json`."
+2. Report how many entries were analyzed vs skipped.
 
 ## Important Constraints
 
 - **Isolation**: Each paper analysis must be independent. Never use findings
   from one paper to inform the analysis of another.
-- **Reports outside workspace**: Write all output to the manifest's `output_dir`,
+- **Output outside workspace**: Write all output to the manifest's `output_dir`,
   NOT inside the zkml-inspector workspace. This prevents code-inspector from
-  picking up past report text during codebase searches.
+  picking up past output during codebase searches.
 - **No code execution**: Only read and parse files from target codebases. Never
   execute code.
-- **Resume**: Skip entries whose report file already exists. This allows
+- **Resume**: Skip entries listed in `completed_entries.json`. This allows
   resuming an interrupted batch by re-invoking with the same manifest.
 - **Sequential only**: Do NOT parallelize analyses. Run them strictly one at a
   time so each sub-agent gets a clean context.

@@ -153,6 +153,9 @@ class TestAnalyzeFullContent:
         assert "output_path" in self.text, (
             "analyze-full.md must describe output_path determination"
         )
+        assert "agent_output.json" in self.text, (
+            "analyze-full.md must reference agent_output.json as output target"
+        )
 
     def test_has_pdf_mcp_tool(self) -> None:
         assert "mcp__pdf-reader__read_pdf" in self.text, (
@@ -161,7 +164,12 @@ class TestAnalyzeFullContent:
 
     def test_has_fallback_write(self) -> None:
         assert "Fallback" in self.text or "fallback" in self.text, (
-            "analyze-full.md must have a fallback to write the report if sub-agent doesn't"
+            "analyze-full.md must have a fallback to write findings if sub-agent doesn't"
+        )
+
+    def test_has_entry_id_logic(self) -> None:
+        assert "entry_id" in self.text, (
+            "analyze-full.md must describe entry_id derivation for report-writer"
         )
 
     def test_has_quality_gate(self) -> None:
@@ -193,20 +201,20 @@ class TestAnalyzeBatchContent:
         )
 
     def test_has_benchmark_schema_fields(self) -> None:
-        for field in [
-            "entry-id",
-            "issue-name",
-            "issue-explanation",
-            "relevant-code",
-            "paper-reference",
-        ]:
-            assert field in self.text, (
-                f"analyze-batch.md must reference benchmark field '{field}'"
-            )
+        """Batch command must mention agent_output.json and entry-id."""
+        assert "agent_output.json" in self.text, (
+            "analyze-batch.md must reference agent_output.json output"
+        )
+        assert "entry-id" in self.text or "entry_id" in self.text, (
+            "analyze-batch.md must reference entry-id field"
+        )
 
     def test_has_resume_logic(self) -> None:
         assert "resume" in self.text.lower() or "skip" in self.text.lower(), (
-            "analyze-batch.md must describe resume/skip behavior for existing reports"
+            "analyze-batch.md must describe resume/skip behavior for completed entries"
+        )
+        assert "completed_entries.json" in self.text, (
+            "analyze-batch.md must use completed_entries.json sidecar for resume"
         )
 
     def test_has_context_compaction(self) -> None:
@@ -221,7 +229,7 @@ class TestAnalyzeBatchContent:
 
     def test_saves_outside_workspace(self) -> None:
         assert "outside" in self.text.lower() or "next to" in self.text.lower() or "NOT inside" in self.text, (
-            "analyze-batch.md must save reports outside the zkml-inspector workspace"
+            "analyze-batch.md must save output outside the zkml-inspector workspace"
         )
 
     def test_sequential_only(self) -> None:

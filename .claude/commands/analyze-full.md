@@ -40,10 +40,10 @@ When dispatching sub-agents, enforce these rules:
 Use `TaskCreate` to create tasks for the pipeline steps:
 1. **Paper analysis** — subject: `Paper analysis (<paper_name>)`, activeForm: `Analyzing paper`
 2. **Code audit** — subject: `Code audit (<codebase_name>)`, activeForm: `Auditing codebase`
-3. **Report generation** — subject: `Report generation`, activeForm: `Generating report`
+3. **Findings export** — subject: `Findings export`, activeForm: `Exporting findings`
 
 Set up `addBlockedBy` dependencies so code audit is blocked by paper analysis,
-and report generation is blocked by code audit.
+and findings export is blocked by code audit.
 
 ## Step 2: Paper Analysis (paper-analyst)
 
@@ -76,55 +76,50 @@ soundness_findings, protocol_transcript_findings, and precision_findings.
 
 Mark the code audit task as `completed`. Provide a brief progress update to the user.
 
-## Step 4: Report Generation (report-writer)
+## Step 4: Findings Export (report-writer)
 
-Mark the report generation task as `in_progress` using `TaskUpdate`.
+Mark the findings export task as `in_progress` using `TaskUpdate`.
 
-Determine the `output_path` for the report file:
+Determine the `entry_id` for this analysis:
+1. If the user specified an entry-id, use that.
+2. Otherwise, derive it from the paper filename: strip extension, lowercase,
+   replace spaces with hyphens (e.g., `zkLLM.pdf` → `zkllm`).
+
+Determine the `output_path` for the findings file:
 1. If the user specified an output path, use that.
-2. Otherwise, derive a filename from the paper title or codebase name:
-   - Sanitize the name: lowercase, replace spaces with hyphens, strip special chars
-   - Pattern: `reports/{name}_report.md`
-   - Example: `reports/zkllm_report.md`
+2. Otherwise, default to `reports/agent_output.json`.
 
 Use the Agent tool to dispatch the **report-writer** sub-agent with:
 - The paper manifest (from Step 2)
 - The audit findings (from Step 3)
-- The `output_path` for the report file
+- The `entry_id`
+- The `output_path` for the findings file
 
-The report-writer will produce a Markdown report covering:
-- Executive Summary
-- Commitment Audit
-- Operator Coverage Matrix (✅/⚠️/❌/➕)
-- Soundness Findings
-- Protocol Transcript Findings (if any)
-- Precision Findings (if any)
-- Recommendations (prioritized by severity: CRITICAL -> WARNING -> INFO)
-- **Benchmark Findings (machine-readable)** — a single fenced JSON code
-  block at the end with the deduplicated findings in the 8-field
-  benchmark schema. Required on every report.
+The report-writer will:
+- Filter to CRITICAL-severity findings only
+- Deduplicate findings with shared root causes
+- Map to the 5-field benchmark schema (`entry-id`, `issue-name`,
+  `issue-explanation`, `relevant-code`, `paper-reference`)
+- Merge into existing `agent_output.json` (replacing any prior findings
+  for the same entry-id)
+- Update `completed_entries.json` sidecar
 
-Note: every finding flows from code-inspector with `category` and
-`security_concern` already assigned (per
-`references/benchmark_taxonomy.md`); report-writer only renders these
-verbatim.
-
-The report-writer uses the Write tool to save the report to disk.
+The report-writer uses the Write tool to save the JSON to disk.
 
 ## Fallback
 
-If report-writer returns the report content but could not save the file,
-use the Write tool yourself to write it to `output_path`.
-The report MUST be on disk before the pipeline is considered complete.
+If report-writer returns findings but could not save the file,
+use the Write tool yourself to write the JSON to `output_path`.
+The file MUST be on disk before the pipeline is considered complete.
 
-Mark the report generation task as `completed`.
+Mark the findings export task as `completed`.
 
 ## Final Summary
 
-After the report is written:
-1. **Present a summary** to the user in chat — key finding counts, most critical issue, overall assessment
-2. **Confirm the file location**: tell the user where the report was saved
-3. Offer to dive deeper into any section
+After findings are exported:
+1. **Present a summary** to the user in chat — how many CRITICAL findings
+   exported, how many WARNING/INFO filtered out, the entry-id used
+2. **Confirm the file location**: tell the user where `agent_output.json` was saved
 
 ## Communication Style
 
